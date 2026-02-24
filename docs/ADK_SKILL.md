@@ -9,6 +9,33 @@ This document serves as the primary implementation guideline and playbook for bu
 
 [ADK](https://google.github.io/adk-docs/) is a Python-first framework (with support for TS, Go, Java) designed to build model-agnostic, easily orchestratable AI agents using standard software engineering patterns instead of obscure prompting frameworks.
 
+## 0. ADK Skill Map
+- status: active
+- type: guideline
+- id: skill.adk_implementation.skill_map
+- last_checked: 2026-02-24
+<!-- content -->
+The ADK knowledge base is split across several specialized files. Use this map to navigate to the right document.
+
+**Core skill documents** (in `docs/`):
+
+| Skill file | Coverage | When to read it |
+| :--- | :--- | :--- |
+| **`ADK_SKILL.md`** *(this file)* | Project scaffolding, `imports.py` convention, execution & testing, MCP quick-start | Starting a new project or reviewing foundational conventions |
+| **`ADK_TOOLS_SKILL.md`** | All tool types: built-in (`google_search`, code executor), native ADK toolsets (BigQuery, Vertex AI), MCP integrations (GitHub, Stripe, MongoDB, Notion…), observability plugins — 24 tools catalogued | Adding any tool capability to an agent |
+| **`ADK_MCP_SKILL.md`** | MCP architecture deep-dive: `McpToolset`, stdio vs. SSE vs. StreamableHTTP, ADK-as-client vs. ADK-as-server, 30+ MCP tool reference | Connecting to an MCP server or understanding MCP internals |
+| **`ADK_WORKFLOW_SKILL.md`** | Workflow agents: `SequentialAgent`, `ParallelAgent`, `LoopAgent`, state management, `exit_loop` pattern, 24 composition patterns, design principles | Building deterministic multi-step pipelines |
+
+**Project-level skill files** (live alongside each subproject's code):
+
+| Skill file | Project | What it demonstrates |
+| :--- | :--- | :--- |
+| `mcp_tools/FILESYSTEM_SKILL.md` | `mcp_tools/` | Filesystem MCP server, sandboxed workspace, `McpToolset` lifecycle |
+| `workflow_agents/WORKFLOW_SKILL.md` | `workflow_agents/` | Research-draft-refine pipeline using all three workflow agent types |
+| `ecosystem/ADK_ECOSYSTEM_SKILL.md` | `ecosystem/` | Combined workflow agents + `google_search` tool pipeline |
+
+**Reading order for new users:** `ADK_SKILL.md` → `ADK_TOOLS_SKILL.md` → `ADK_MCP_SKILL.md` → `ADK_WORKFLOW_SKILL.md`
+
 ## 1. Creating an ADK Project From Scratch
 - status: active
 - type: guideline
