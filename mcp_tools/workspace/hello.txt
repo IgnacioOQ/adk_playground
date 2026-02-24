@@ -1,0 +1,8 @@
+Hello from the ADK MCP workspace!
+
+This file is inside the sandboxed directory that the filesystem_assistant_agent
+is allowed to read and write. Try asking the agent to:
+
+  - List this directory
+  - Read this file
+  - Create a new file or folder

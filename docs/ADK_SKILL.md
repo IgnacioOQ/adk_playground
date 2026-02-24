@@ -114,3 +114,131 @@ ADK applications inherently rely on standard `.env` variables (like `GOOGLE_API_
 - **Web Runner** (`adk web --port 8000` from project root): Provides a chat GUI at `localhost:8000`. 
 
 **Critical Trick for Web Runner**: If you change the underlying Python tool implementations (e.g., changing how a function fetches data), the `adk web` background process *may not instantly hot-reload* the tool logic. You must terminate and restart the web server to guarantee new Python tool logic is picked up.
+
+## 5. MCP (Model Context Protocol) Tool Integration
+- status: active
+- type: guideline
+- id: skill.adk_implementation.mcp_tools
+- last_checked: 2026-02-24
+- label: [infrastructure, core]
+<!-- content -->
+ADK agents can delegate tool execution to external **MCP servers** — processes that expose capabilities (file I/O, database queries, web search, etc.) over a standard protocol. The `McpToolset` class acts as the bridge.
+
+Reference: https://google.github.io/adk-docs/tools-custom/mcp-tools/
+
+### Architecture: Client-Server Pattern
+- status: active
+- type: guideline
+- id: skill.adk_implementation.mcp_tools.architecture
+- last_checked: 2026-02-24
+<!-- content -->
+```
+LlmAgent
+  └── tools=[McpToolset]
+              │  (manages lifecycle)
+              ▼
+        MCP Server process
+        (e.g. npx @modelcontextprotocol/server-filesystem)
+```
+`McpToolset` handles five responsibilities automatically:
+1. **Spawn / Connect** — starts a stdio subprocess or opens an SSE connection.
+2. **Discover** — calls `list_tools` and fetches schemas from the server.
+3. **Adapt** — converts MCP tool schemas into ADK-compatible tool definitions.
+4. **Expose** — makes the adapted tools available to the `LlmAgent`.
+5. **Proxy** — routes the LLM's tool-call requests to the server and returns results.
+
+### Import Conventions
+- status: active
+- type: guideline
+- id: skill.adk_implementation.mcp_tools.imports
+- last_checked: 2026-02-24
+<!-- content -->
+Add the following block to the agent's `imports.py` (do **not** scatter these across files):
+
+```python
+# MCP Tooling
+from google.adk.tools.mcp_tool import McpToolset
+from google.adk.tools.mcp_tool.mcp_session_manager import (
+    StdioConnectionParams,  # Local subprocess (stdin/stdout)
+    SseConnectionParams,    # Remote server (Server-Sent Events)
+)
+from mcp import StdioServerParameters  # Shell command + args for stdio servers
+```
+
+Then in `agent.py`:
+```python
+from .imports import LlmAgent, McpToolset, StdioConnectionParams, StdioServerParameters
+```
+
+### Connection Parameter Types
+- status: active
+- type: guideline
+- id: skill.adk_implementation.mcp_tools.connection_types
+- last_checked: 2026-02-24
+<!-- content -->
+| Class | When to use |
+| :--- | :--- |
+| `StdioConnectionParams` | Local dev, Docker containers, bundled MCP servers launched via `npx` or a binary |
+| `SseConnectionParams` | Remote or cloud-hosted MCP servers reachable over HTTP/SSE |
+
+**Stdio example** (local filesystem server via npm):
+```python
+McpToolset(
+    connection_params=StdioConnectionParams(
+        server_params=StdioServerParameters(
+            command='npx',
+            args=[
+                "-y",                                       # auto-install package if missing
+                "@modelcontextprotocol/server-filesystem",  # the MCP server npm package
+                "/absolute/path/to/workspace",             # sandboxed root — MUST be absolute
+            ],
+        ),
+    ),
+    tool_filter=['list_directory', 'read_file', 'write_file', 'create_directory'],
+)
+```
+
+### Naming Conventions
+- status: active
+- type: guideline
+- id: skill.adk_implementation.mcp_tools.naming
+- last_checked: 2026-02-24
+<!-- content -->
+Follow these conventions to keep multi-agent and multi-tool architectures readable:
+
+| Element | Convention | Example |
+| :--- | :--- | :--- |
+| Agent variable | `<role>_agent` | `filesystem_assistant_agent` |
+| `McpToolset` | one instance per MCP server | — |
+| `tool_filter` values | exact MCP tool names (snake_case) | `'read_file'`, `'list_directory'` |
+| Workspace path constant | `WORKSPACE_PATH` (module-level) | `WORKSPACE_PATH = os.path.abspath(...)` |
+
+### Tool Filter Best Practice
+- status: active
+- type: guideline
+- id: skill.adk_implementation.mcp_tools.tool_filter
+- last_checked: 2026-02-24
+<!-- content -->
+Always provide an explicit `tool_filter` list. MCP servers can expose many tools; exposing all of them:
+- Increases token usage (all schemas go into the LLM context).
+- Widens the attack surface (the LLM could invoke destructive operations unintentionally).
+
+Only list the tools the agent actually needs for its stated purpose.
+
+### Deployment Note
+- status: active
+- type: guideline
+- id: skill.adk_implementation.mcp_tools.deployment
+- last_checked: 2026-02-24
+<!-- content -->
+For cloud deployments (Cloud Run, GKE, Vertex AI Agent Engine), `McpToolset` and the agent **must be defined synchronously** in `agent.py`. Async factory patterns are not supported in those environments.
+
+### Prerequisites
+- status: active
+- type: guideline
+- id: skill.adk_implementation.mcp_tools.prerequisites
+- last_checked: 2026-02-24
+<!-- content -->
+For npm-based MCP servers (like `@modelcontextprotocol/server-filesystem`):
+- Node.js and `npx` must be installed and on `$PATH`.
+- Verify with `node --version` and `npx --version` before running `adk web` or `adk run`.

@@ -47,6 +47,27 @@ Beyond the core agent types, ADK allows significantly expanding what agents can 
 - **Skills**: Use prebuilt or custom Agent Skills efficiently inside AI context limits.
 - **Callbacks**: Hook into specific events during execution to add logging, monitoring, or custom side-effects.
 
+## MCP (Model Context Protocol) Integration
+- status: active
+- type: documentation
+<!-- content -->
+ADK agents can consume external tool servers that speak the [Model Context Protocol](https://modelcontextprotocol.io/). The `McpToolset` class handles the full lifecycle:
+
+1. **Spawn** — starts the MCP server process (stdio) or opens an SSE connection (remote).
+2. **Discover** — calls `list_tools` on the server and adapts schemas to ADK format.
+3. **Proxy** — routes the LLM's tool-call requests to the server transparently.
+
+**Key classes** (all exported from each agent's `imports.py`):
+
+| Class | Module | Purpose |
+| :--- | :--- | :--- |
+| `McpToolset` | `google.adk.tools.mcp_tool` | Top-level ADK wrapper for an MCP server |
+| `StdioConnectionParams` | `google.adk.tools.mcp_tool.mcp_session_manager` | Launch a local MCP server subprocess |
+| `SseConnectionParams` | `google.adk.tools.mcp_tool.mcp_session_manager` | Connect to a remote MCP server over SSE |
+| `StdioServerParameters` | `mcp` | Shell command + args to spawn the server |
+
+**Prerequisites for the filesystem example**: Node.js and `npx` must be available (`node --version`).
+
 ## Installation
 - status: active
 - type: documentation
@@ -76,7 +97,12 @@ This playground enforces several project-specific conventions to maximize AI-age
 This repository is organized to separate conversational contexts and agent code:
 
 - `docs/`: Contains all specialized Markdown guidelines and skills (e.g., `AGENTS.md`, `MD_CONVENTIONS.md`, `MCP_GUIDELINE.md`). These files act as knowledge dependencies for the LLMs.
-- `tutorial_agent/`: A functional "getting started" agent project created using the `adk create` CLI. 
-  - `tutorial_agent/imports.py`: A centralized file that exports key ADK components (`LlmAgent`, `SequentialAgent`, etc.). When building tools or exploring the framework, import ADK classes from here to maintain a clean architecture.
+- `tutorial_agent/`: A functional "getting started" agent project created using the `adk create` CLI.
+  - `tutorial_agent/imports.py`: A centralized file that exports key ADK components (`LlmAgent`, `SequentialAgent`, `McpToolset`, etc.). When building tools or exploring the framework, import ADK classes from here to maintain a clean architecture.
   - `tutorial_agent/agent.py`: The entry point containing the `root_agent` and any attached sample tools (like `get_current_time`).
   - `tutorial_agent/.env`: A local, git-ignored file containing your `GOOGLE_API_KEY`.
+- `mcp_tools/`: An agent project demonstrating **MCP (Model Context Protocol)** tool integration. The agent connects to an external MCP server (the `@modelcontextprotocol/server-filesystem` npm package) via `McpToolset`, gaining file-system capabilities without any hand-written Python tool functions.
+  - `mcp_tools/imports.py`: Centralized imports extended with `McpToolset`, `StdioConnectionParams`, `SseConnectionParams`, and `StdioServerParameters`.
+  - `mcp_tools/agent.py`: Defines `filesystem_assistant_agent` — an `LlmAgent` whose tools array contains a single `McpToolset` that spawns and manages the MCP server subprocess.
+  - `mcp_tools/workspace/`: The sandboxed directory the MCP filesystem server is allowed to access. Agents cannot read or write outside this path.
+  - `mcp_tools/.env`: A local, git-ignored file containing your `GOOGLE_API_KEY`.

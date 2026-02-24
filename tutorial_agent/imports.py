@@ -24,5 +24,16 @@ try:
 except ImportError:
     pass # Adjust based on the exact Google GenAI wrapper used internally
 
-# Add additional pre-built tools here as we discover them
-# e.g from google.adk.tools import ...
+# --- MCP Tooling ---
+# McpToolset  : Wraps an MCP server connection. Handles tool discovery,
+#               schema adaptation, and call proxying on behalf of the LlmAgent.
+# https://google.github.io/adk-docs/tools-custom/mcp-tools/
+from google.adk.tools.mcp_tool import McpToolset
+from google.adk.tools.mcp_tool.mcp_session_manager import (
+    StdioConnectionParams,  # Launch a local MCP server subprocess (stdin/stdout)
+    SseConnectionParams,    # Connect to a remote MCP server via Server-Sent Events
+)
+
+# StdioServerParameters: The command + args used to launch a stdio MCP server.
+# Imported from the `mcp` package (installed as a dependency of google-adk).
+from mcp import StdioServerParameters
