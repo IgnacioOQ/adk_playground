@@ -112,3 +112,8 @@ This repository is organized to separate conversational contexts and agent code:
   - `workflow_agents/tools/loop_control.py`: The `exit_loop` tool that lets the reviewer LlmAgent signal the LoopAgent to stop iterating.
   - `workflow_agents/WORKFLOW_SKILL.md`: Architecture guide and implementation reference for all three workflow agent types.
   - `workflow_agents/.env`: A local, git-ignored file containing your `GOOGLE_API_KEY`.
+- `ecosystem/`: An agent project that **combines workflow agents with MCP tools** in a single pipeline. It extends `workflow_agents/` by giving each parallel researcher live internet access via the `mcp-server-fetch` MCP server. The result is a web-sourced research report with real cited URLs.
+  - `ecosystem/imports.py`: Centralized imports covering both workflow agent classes (`SequentialAgent`, `ParallelAgent`, `LoopAgent`) and MCP classes (`McpToolset`, `StdioConnectionParams`, `StdioServerParameters`).
+  - `ecosystem/agent.py`: Defines `web_research_pipeline_agent` — a `SequentialAgent` where the `ParallelAgent` research phase has `McpToolset[fetch]`-equipped researchers, followed by drafting and a `LoopAgent` refinement loop.
+  - `ecosystem/tools/loop_control.py`: The `exit_loop` tool (same pattern as `workflow_agents/`).
+  - `ecosystem/ADK_ECOSYSTEM_SKILL.md`: Architecture guide, combination patterns, state flow, and extension roadmap for building more complex ecosystems.
