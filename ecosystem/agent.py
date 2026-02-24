@@ -1,9 +1,16 @@
 # Pipeline Step 1: Load ADK Framework Components (workflow + MCP)
+import os
+import sys
+
 from .imports import (
     LlmAgent, SequentialAgent, ParallelAgent, LoopAgent,
     McpToolset, StdioConnectionParams, StdioServerParameters,
 )
 from .tools.loop_control import exit_loop
+
+# Resolve the mcp-server-fetch executable from the active venv's bin directory.
+# This avoids a hard-coded path and works regardless of where the venv lives.
+_FETCH_SERVER = os.path.join(os.path.dirname(sys.executable), 'mcp-server-fetch')
 
 # ============================================================
 # PIPELINE OVERVIEW
@@ -53,12 +60,16 @@ from .tools.loop_control import exit_loop
 # ============================================================
 
 def _fetch_toolset() -> McpToolset:
-    """Return a new McpToolset instance backed by mcp-server-fetch."""
+    """Return a new McpToolset instance backed by mcp-server-fetch.
+
+    Uses the mcp-server-fetch executable installed in the active venv.
+    Install it once with: pip install mcp-server-fetch
+    """
     return McpToolset(
         connection_params=StdioConnectionParams(
             server_params=StdioServerParameters(
-                command='uvx',
-                args=['mcp-server-fetch'],
+                command=_FETCH_SERVER,
+                args=[],
             ),
         ),
         tool_filter=['fetch'],

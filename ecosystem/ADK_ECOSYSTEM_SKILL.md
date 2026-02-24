@@ -117,8 +117,8 @@ def _fetch_toolset() -> McpToolset:
     return McpToolset(
         connection_params=StdioConnectionParams(
             server_params=StdioServerParameters(
-                command='uvx',
-                args=['mcp-server-fetch'],
+                command=_FETCH_SERVER,   # resolved from venv bin at module load
+                args=[],
             ),
         ),
         tool_filter=['fetch'],
@@ -175,7 +175,7 @@ This project is designed as a foundation. Common extensions:
 ### Prerequisites
 1. Python virtual environment activated with `google-adk` installed.
 2. `GOOGLE_API_KEY` set in `ecosystem/.env` (copy from `tutorial_agent/.env`).
-3. `uvx` available — install via `pip install uv` if needed. Used to spawn `mcp-server-fetch`.
+3. `mcp-server-fetch` installed in the venv: `pip install mcp-server-fetch`.
 
 ### Web UI (recommended)
 ```bash
