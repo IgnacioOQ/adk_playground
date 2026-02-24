@@ -6,12 +6,12 @@ Pipeline Step 1: Framework Component Centralization
 Instead of importing from deep within `google.adk` in every file, we centralize them here.
 This makes the agent code cleaner and easier to maintain.
 """
-
+# https://google.github.io/adk-docs/agents/
 # Core Agent Types: The building blocks of your ADK applications.
 # BaseAgent: The foundation for creating custom agents.
-# Agent/LlmAgent: Agents powered by Large Language Models (like Gemini).
+# LlmAgent: Agents powered by Large Language Models (like Gemini).
 from google.adk.agents.base_agent import BaseAgent
-from google.adk.agents.llm_agent import Agent, LlmAgent
+from google.adk.agents.llm_agent import LlmAgent
 
 # Workflow Agents: Used to orchestrate other agents in specific patterns.
 from google.adk.agents.sequential_agent import SequentialAgent

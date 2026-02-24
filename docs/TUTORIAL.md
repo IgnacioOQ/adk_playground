@@ -15,7 +15,7 @@ Building an ADK agent involves three core steps, all of which are demonstrated i
 <!-- content -->
 Instead of importing classes from deep within the `google.adk` library across multiple files, we centralize them in `tutorial_agent/imports.py`.
 
-*   **Why?** The ADK library is extensive. Centralizing imports (like `Agent`, `SequentialAgent`, `BaseAgent`) prevents long, messy import blocks in your actual logic files. It also provides a single source of truth for the components your playground utilizes.
+*   **Why?** The ADK library is extensive. Centralizing imports (like `LlmAgent`, `SequentialAgent`, `BaseAgent`) prevents long, messy import blocks in your actual logic files. It also provides a single source of truth for the components your playground utilizes.
 
 ### Step 2: Define Tools
 - status: active
@@ -29,7 +29,7 @@ In `tutorial_agent/agent.py`, we defined `get_current_time(city: str) -> dict`.
 ### Step 3: Initialize the Agent
 - status: active
 <!-- content -->
-The `Agent` (or `LlmAgent`) class ties everything together. In `agent.py`, we initialize the `root_agent` with several key parameters:
+The `LlmAgent` class ties everything together. In `agent.py`, we initialize the `root_agent` with several key parameters:
 
 *   **`model`**: Specifies the underlying intelligence (e.g., `gemini-2.5-flash`).
 *   **`name`**: A programmatic identifier, crucial when orchestrating multiple agents.

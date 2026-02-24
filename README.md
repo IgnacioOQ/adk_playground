@@ -10,6 +10,8 @@
 <!-- content -->
 The Agent Development Kit (ADK) is a flexible and modular framework developed by Google for building and deploying AI agents. While optimized for Gemini and the Google ecosystem, ADK is model-agnostic, deployment-agnostic, and designed to make agentic architectures feel more like traditional software development.
 
+https://google.github.io/adk-docs/agents/
+
 This repository serves as a playground and central nervous system for learning and experimenting with ADK concepts.
 
 ## Core Agent Categories
@@ -18,7 +20,7 @@ This repository serves as a playground and central nervous system for learning a
 <!-- content -->
 ADK provides distinct agent categories to build sophisticated applications:
 
-1. **LLM Agents** (`LlmAgent`, `Agent`): These agents utilize Large Language Models (LLMs) as their core engine to understand natural language, reason, plan, generate responses, and dynamically decide how to proceed or which tools to use. They are ideal for flexible, language-centric tasks.
+1. **LLM Agents** (`LlmAgent`): These agents utilize Large Language Models (LLMs) as their core engine to understand natural language, reason, plan, generate responses, and dynamically decide how to proceed or which tools to use. They are ideal for flexible, language-centric tasks.
 2. **Workflow Agents** (`SequentialAgent`, `ParallelAgent`, `LoopAgent`): These specialized agents control the execution flow of other agents in predefined, deterministic patterns (sequence, parallel, or loop) without using an LLM for the flow control itself. They are perfect for structured processes needing predictable execution.
 3. **Custom Agents** (`BaseAgent`): Created by extending the `BaseAgent` directly, these allow you to implement unique operational logic, specific control flows, or specialized integrations not covered by the standard types.
 
@@ -75,6 +77,6 @@ This repository is organized to separate conversational contexts and agent code:
 
 - `docs/`: Contains all specialized Markdown guidelines and skills (e.g., `AGENTS.md`, `MD_CONVENTIONS.md`, `MCP_GUIDELINE.md`). These files act as knowledge dependencies for the LLMs.
 - `tutorial_agent/`: A functional "getting started" agent project created using the `adk create` CLI. 
-  - `tutorial_agent/imports.py`: A centralized file that exports key ADK components (`Agent`, `SequentialAgent`, etc.). When building tools or exploring the framework, import ADK classes from here to maintain a clean architecture.
+  - `tutorial_agent/imports.py`: A centralized file that exports key ADK components (`LlmAgent`, `SequentialAgent`, etc.). When building tools or exploring the framework, import ADK classes from here to maintain a clean architecture.
   - `tutorial_agent/agent.py`: The entry point containing the `root_agent` and any attached sample tools (like `get_current_time`).
   - `tutorial_agent/.env`: A local, git-ignored file containing your `GOOGLE_API_KEY`.
