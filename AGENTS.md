@@ -1,0 +1,66 @@
+# AGENTS.md
+- status: active
+- type: guideline
+- label: [template, core]
+<!-- content -->
+
+## SHORT ADVICE
+- status: active
+- type: agent_skill
+<!-- content -->
+- The whole trick is providing the AI Assistants with context, and this is done using the *.md files (AGENTS.md, content/logs/AGENTS_LOG.md, and the AI_AGENTS folder)
+- Make sure that when writing *.md files, you use the proper syntax protocol as defined in MD_CONVENTIONS.md. If necessary, you can always use the scripts in the language folder to help you with this.
+- Learn how to work the Github.
+- Keep logs of changes in content/logs/AGENTS_LOG.md
+- Make sure to execute the HOUSEKEEPING.md protocol often.
+- Always ask several forms of verification, so because the self-loop of the chain of thought improves performance.
+- Impose restrictions and constraints explicitly in the context.
+
+## HUMAN-ASSISTANT WORKFLOW
+- status: active
+- type: agent_skill
+<!-- content -->
+1. Open the assistant and load the ai-agents-branch into their local repositories. Do this by commanding them to first of all read the README.md, AGENTS.md, and MD_CONVENTIONS.md files.
+2. Work on the ASSISTANT, making requests, modifying code, etc.
+3. It is very useful to use specialized agents for different sectors of the code. 
+4. Enjoy!
+
+## WORKFLOW & TOOLING
+- status: active
+- type: agent_skill
+<!-- content -->
+*   **Documentation Logs (`content/logs/AGENTS_LOG.md`):**
+    *   **Rule:** Every agent that performs a significant intervention or modifies the codebase **MUST** update the `content/logs/AGENTS_LOG.md` file.
+    *   **Action:** Append a new entry under the "Intervention History" section summarizing the task, the changes made, and the date.
+
+## DEVELOPMENT RULES & CONSTRAINTS
+- status: active
+- type: agent_skill
+<!-- content -->
+1.  **Immutable Core Files:** Do not modify 
+    *   If you need to change the logic of an agent or the model, you must create a **new version** (e.g., a subclass or a new file) rather than modifying the existing classes in place.
+2.  **Consistency:** Ensure any modifications or new additions remain as consistent as possible with the logic and structure of the `main` branch.
+3.  **Coding Conventions:** Always keep the coding conventions pristine.
+4.  **Performance:** When interacting with databases (Vector DB, Graph) or APIs, **always prefer batch operations** over sequential loops. (e.g., use `vs.query([q1, q2])` instead of looping `vs.query(q1)`).
+
+## CONTEXT FINE-TUNING
+- status: active
+- type: agent_skill
+<!-- content -->
+You cannot "fine-tune" an AI agent (change its underlying neural network weights) with files in this repository. **However**, you **CAN** achieve a similar result using **Context**.
+
+**How it works (The "Context" Approach):**
+If you add textbooks or guides to the repository (preferably as Markdown `.md` or text files), agents can read them. You should then update the relevant agent instructions (e.g., `AI_AGENTS/specialists/LINEARIZE_SKILL.md` or `AI_AGENTS/specialists/CLOUD_SCHEDULER_SKILL.md`) to include a directive like:
+
+> "Before implementing changes, read `MD_CONVENTIONS.md`."
+
+**Why this is effective:**
+1.  **Specific Knowledge:** Adding a specific textbook helps if you want a *specific style* of implementation (e.g., using `jax.lax.scan` vs `vmap` in a particular way).
+2.  **Domain Techniques:** If the textbook contains specific math shortcuts for your network types, providing the text allows the agent to apply those exact formulas instead of generic ones.
+
+**Recommendation:**
+If you want to teach an agent a new language (like JAX) or technique:
+1.  Add the relevant chapters as **text/markdown** files.
+    *   **Best Practice:** Organize these files using the **Markdown-JSON Hybrid Schema** (see `MD_CONVENTIONS.md`). This allows agents to understand the hierarchy of the concepts and metadata like `difficulty` or `topic`, and enables programmatic manipulation via JSON.
+2.  Update the agent's instruction file (e.g., `AI_AGENTS/LINEARIZE_SKILL.md`) to reference them.
+3.  Ask the agent to "Refactor the code using the techniques in [File X]".
