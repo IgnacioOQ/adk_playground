@@ -106,3 +106,9 @@ This repository is organized to separate conversational contexts and agent code:
   - `mcp_tools/agent.py`: Defines `filesystem_assistant_agent` — an `LlmAgent` whose tools array contains a single `McpToolset` that spawns and manages the MCP server subprocess.
   - `mcp_tools/workspace/`: The sandboxed directory the MCP filesystem server is allowed to access. Agents cannot read or write outside this path.
   - `mcp_tools/.env`: A local, git-ignored file containing your `GOOGLE_API_KEY`.
+- `workflow_agents/`: An agent project demonstrating all **three ADK workflow agent types** working together. It implements a research-draft-refine pipeline: a `ParallelAgent` fans out to three concurrent researchers, a `SequentialAgent` chains the phases in order, and a `LoopAgent` iteratively polishes the final report.
+  - `workflow_agents/imports.py`: Centralized imports for `LlmAgent`, `SequentialAgent`, `ParallelAgent`, `LoopAgent`, and `ToolContext`.
+  - `workflow_agents/agent.py`: Defines the full pipeline — `research_phase_agent` (ParallelAgent) → `drafting_agent` (LlmAgent) → `refinement_loop_agent` (LoopAgent) — all orchestrated by `root_agent` (SequentialAgent).
+  - `workflow_agents/tools/loop_control.py`: The `exit_loop` tool that lets the reviewer LlmAgent signal the LoopAgent to stop iterating.
+  - `workflow_agents/WORKFLOW_SKILL.md`: Architecture guide and implementation reference for all three workflow agent types.
+  - `workflow_agents/.env`: A local, git-ignored file containing your `GOOGLE_API_KEY`.
