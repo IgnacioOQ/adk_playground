@@ -66,3 +66,15 @@ This playground enforces several project-specific conventions to maximize AI-age
 - **Markdown-JSON Hybrid Schema**: All core Markdown files must follow a strict header-metadata format (described in `MD_CONVENTIONS.md`) ensuring loss-less conversion to JSON.
 - **Agent Logs**: Every agent that performs a significant intervention must update `content/logs/AGENTS_LOG.md` (as per `AGENTS.md` guidelines).
 - **Core Principles**: See `AGENTS.md` for human-assistant workflows, constraints, and instructions on context fine-tuning.
+
+## Project Structure
+- status: active
+- type: documentation
+<!-- content -->
+This repository is organized to separate conversational contexts and agent code:
+
+- `docs/`: Contains all specialized Markdown guidelines and skills (e.g., `AGENTS.md`, `MD_CONVENTIONS.md`, `MCP_GUIDELINE.md`). These files act as knowledge dependencies for the LLMs.
+- `tutorial_agent/`: A functional "getting started" agent project created using the `adk create` CLI. 
+  - `tutorial_agent/imports.py`: A centralized file that exports key ADK components (`Agent`, `SequentialAgent`, etc.). When building tools or exploring the framework, import ADK classes from here to maintain a clean architecture.
+  - `tutorial_agent/agent.py`: The entry point containing the `root_agent` and any attached sample tools (like `get_current_time`).
+  - `tutorial_agent/.env`: A local, git-ignored file containing your `GOOGLE_API_KEY`.
