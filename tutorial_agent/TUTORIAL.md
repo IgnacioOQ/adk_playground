@@ -8,12 +8,12 @@ This document explains the steps involved in the creation and execution of the `
 ## The Pipeline Steps
 - status: active
 <!-- content -->
-Building an ADK agent involves three core steps, all of which are demonstrated in `tutorial_agent/agent.py` and `tutorial_agent/imports.py`.
+Building an ADK agent involves three core steps, all of which are demonstrated in `agent.py` and `imports.py`.
 
 ### Step 1: Framework Component Centralization
 - status: active
 <!-- content -->
-Instead of importing classes from deep within the `google.adk` library across multiple files, we centralize them in `tutorial_agent/imports.py`.
+Instead of importing classes from deep within the `google.adk` library across multiple files, we centralize them in `imports.py`.
 
 *   **Why?** The ADK library is extensive. Centralizing imports (like `LlmAgent`, `SequentialAgent`, `BaseAgent`) prevents long, messy import blocks in your actual logic files. It also provides a single source of truth for the components your playground utilizes.
 
@@ -22,7 +22,7 @@ Instead of importing classes from deep within the `google.adk` library across mu
 <!-- content -->
 Tools are Python functions that the LLM can decide to execute when it needs to access external information or perform an action "in the real world."
 
-In `tutorial_agent/agent.py`, we defined `get_current_time(city: str) -> dict`.
+In `agent.py`, we defined `get_current_time(city: str) -> dict`.
 
 *   **How it works:** When the user asks "What time is it in Paris?", the LLM recognizes it needs that information. It pauses its text generation, formats a JSON request to call `get_current_time("Paris")`, intercepts the mock dictionary response, and then continues generating the final text for the user using that new context.
 
@@ -42,7 +42,7 @@ The `LlmAgent` class ties everything together. In `agent.py`, we initialize the 
 <!-- content -->
 Once the agent is defined, the ADK framework provides built-in runners to execute it:
 
-1.  **CLI Runner (`adk run`)**: Initializes the terminal-based interactive chat loop.
-2.  **Web Runner (`adk web`)**: Spins up a local FastAPI server (defaulting to port `8000`) and provides a browser-based chat interface.
+1.  **CLI Runner (`adk run`)**: Initializes the terminal-based interactive chat loop. Run this from within the specific agent's folder (e.g., `cd tutorial_agent && adk run`).
+2.  **Web Runner (`adk web`)**: Spins up a local FastAPI server (defaulting to port `8000`) and provides a browser-based chat interface. Note: This command expects to be run from a parent "agents directory" containing one or more agent subfolders (e.g., from the root `adk_playground` directory run `adk web` or `adk web .`).
 
 Both runners automatically seek out the `root_agent` defined in your designated agent directory.

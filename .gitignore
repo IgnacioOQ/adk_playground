@@ -21,3 +21,6 @@ logs/
 # IDEs
 .idea/
 .vscode/
+
+# Databases
+session.db
