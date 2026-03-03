@@ -269,3 +269,17 @@ For cloud deployments (Cloud Run, GKE, Vertex AI Agent Engine), `McpToolset` and
 For npm-based MCP servers (like `@modelcontextprotocol/server-filesystem`):
 - Node.js and `npx` must be installed and on `$PATH`.
 - Verify with `node --version` and `npx --version` before running `adk web` or `adk run`.
+## 6. Token Optimization & Cost Efficiency
+- status: active
+- type: guideline
+- id: skill.adk_implementation.tokenopt
+- last_checked: 2026-03-03
+- label: [infrastructure]
+<!-- content -->
+When designing prompts, configuring agents, and supplying tool contexts, token efficiency is critical. Agents MUST follow these basic principles (see `TOKENOPT_SKILL.md` for deep dive):
+
+1.  **Model Selection**: Default to `gemini-2.5-flash` for all data orchestration, parsing, and structured extraction. Reserve `gemini-2.5-pro` for deep reasoning, architectural planning, or complex creative inference.
+2.  **Filter Tools**: When initializing an `McpToolset`, always provide a minimal `tool_filter` list. Sending 20 unused tool schemas to an LLM on every turn wastes significant context capacity.
+3.  **JSON Minification**: Never send pretty-printed (e.g., `indent=4`) JSON payloads in a prompt. Always use compact serialization (`separators=(',', ':')`) to avoid tokenizing thousands of whitespace characters.
+4.  **Output Constraining**: Always set an explicit `max_output_tokens` appropriate for the task, and use strict structured outputs (`response_mime_type="application/json"`) instead of relying on the LLM to wrap JSON in Markdown prose.
+5.  **Caching Static Contexts**: Use Gemini's explicit context caching when submitting the same massive reference dictionary or knowledge base to many distinct agent invocations.
