@@ -33,15 +33,19 @@ export default function NodePalette({ onDragStart }: NodePaletteProps) {
         Click a node to edit its properties.
       </div>
 
-      <div className="palette-section-title">Edge types</div>
+      <div className="palette-section-title">Edge colors</div>
       <div className="palette-edge-legend">
         <div className="edge-legend-item">
-          <span className="edge-line edge-line-solid" />
-          <span>sub_agent</span>
+          <span className="edge-line" style={{ background: '#6366f1' }} />
+          <span>workflow → agent</span>
         </div>
         <div className="edge-legend-item">
-          <span className="edge-line edge-line-dashed" />
-          <span>tool</span>
+          <span className="edge-line" style={{ background: '#f97316' }} />
+          <span>LLM → agent</span>
+        </div>
+        <div className="edge-legend-item">
+          <span className="edge-line edge-line-dashed" style={{ backgroundImage: 'repeating-linear-gradient(90deg,#14b8a6 0,#14b8a6 4px,transparent 4px,transparent 8px)' }} />
+          <span>any → tool</span>
         </div>
       </div>
     </aside>

@@ -5,13 +5,7 @@ import BaseNode from './BaseNode'
 
 export default function ToolNode({ data, selected }: NodeProps<Node<ToolData>>) {
   return (
-    <BaseNode
-      kind="Tool"
-      name={data.name}
-      selected={selected}
-      showTopHandle
-      showBottomHandle={false}
-    >
+    <BaseNode kind="Tool" name={data.name} selected={selected}>
       {data.description && <span>{data.description}</span>}
     </BaseNode>
   )

@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   ReactFlow,
   addEdge,
@@ -7,6 +7,7 @@ import {
   MiniMap,
   useNodesState,
   useEdgesState,
+  ConnectionMode,
   type OnConnect,
   type Node,
   type Edge,
@@ -16,7 +17,7 @@ import {
 import '@xyflow/react/dist/style.css'
 import './App.css'
 
-import { defaultData, kindColor } from './types/agent'
+import { defaultData, kindColor, edgeStyle } from './types/agent'
 import type { AgentKind, NodeData } from './types/agent'
 
 import LlmAgentNode from './nodes/LlmAgentNode'
@@ -25,6 +26,7 @@ import ParallelAgentNode from './nodes/ParallelAgentNode'
 import LoopAgentNode from './nodes/LoopAgentNode'
 import ToolNode from './nodes/ToolNode'
 import McpToolsetNode from './nodes/McpToolsetNode'
+import ObservationSetNode from './nodes/ObservationSetNode'
 
 import NodePalette from './components/NodePalette'
 import PropertyPanel from './components/PropertyPanel'
@@ -39,10 +41,14 @@ const nodeTypes: NodeTypes = {
   LoopAgent: LoopAgentNode,
   Tool: ToolNode,
   McpToolset: McpToolsetNode,
+  ObservationSet: ObservationSetNode,
 }
 
 const INITIAL_NODES: Node<NodeData>[] = []
 const INITIAL_EDGES: Edge[] = []
+
+// ObservationSet nodes need an initial size
+const OBS_SET_DEFAULTS = { style: { width: 320, height: 220 }, zIndex: -1 }
 
 export default function App() {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<NodeData>>(INITIAL_NODES)
@@ -51,23 +57,29 @@ export default function App() {
   const reactFlowWrapper = useRef<HTMLDivElement>(null)
   const [reactFlowInstance, setReactFlowInstance] = useState<ReturnType<typeof import('@xyflow/react').useReactFlow> | null>(null)
   const idCounter = useRef(1)
+  // Always-current snapshot of nodes for use in onConnect callback
+  const nodesRef = useRef<Node<NodeData>[]>([])
+  useEffect(() => { nodesRef.current = nodes }, [nodes])
 
   const selectedNode = nodes.find((n) => n.id === selectedNodeId) ?? null
 
   // ── Connections ────────────────────────────────────────────────────────────
   const onConnect: OnConnect = useCallback(
     (connection) => {
-      // Determine edge kind: if source handle is "tool" it's a tool edge
-      const kind = connection.sourceHandle === 'tool' ? 'tool' : 'sub_agent'
+      const sourceKind = nodesRef.current.find((n) => n.id === connection.source)?.data.kind
+      const targetKind = nodesRef.current.find((n) => n.id === connection.target)?.data.kind
+      const style = edgeStyle(sourceKind, targetKind)
+
       const edge: Edge = {
         ...connection,
         id: `e-${connection.source}-${connection.target}-${Date.now()}`,
-        data: { kind },
-        style: kind === 'tool'
-          ? { stroke: '#6b7280', strokeDasharray: '5,4' }
-          : { stroke: '#6366f1' },
-        animated: kind === 'sub_agent',
-        markerEnd: { type: 'arrowclosed' as const },
+        data: { kind: style.kind },
+        style: {
+          stroke: style.color,
+          strokeDasharray: style.dashed ? '6,4' : undefined,
+        },
+        animated: style.animated,
+        markerEnd: { type: 'arrowclosed' as const, color: style.color },
       }
       setEdges((eds) => addEdge(edge, eds))
     },
@@ -92,11 +104,13 @@ export default function App() {
     })
 
     const id = `${kind}-${idCounter.current++}`
+    const extras = kind === 'ObservationSet' ? OBS_SET_DEFAULTS : {}
     const newNode: Node<NodeData> = {
       id,
       type: kind,
       position,
       data: defaultData(kind),
+      ...extras,
     }
     setNodes((nds) => nds.concat(newNode))
     setSelectedNodeId(id)
@@ -177,6 +191,7 @@ export default function App() {
             onPaneClick={onPaneClick}
             nodeTypes={nodeTypes}
             onInit={(inst) => setReactFlowInstance(inst as never)}
+            connectionMode={ConnectionMode.Loose}
             fitView
             deleteKeyCode="Delete"
             colorMode="dark"
@@ -189,7 +204,10 @@ export default function App() {
             />
             <Controls />
             <MiniMap
-              nodeColor={(n) => kindColor((n.data as NodeData).kind)}
+              nodeColor={(n) => {
+                const d = n.data as NodeData
+                return d.kind === 'ObservationSet' ? (d.color as string) : kindColor(d.kind)
+              }}
               style={{ background: '#12141f', border: '1px solid #2d3148' }}
             />
           </ReactFlow>

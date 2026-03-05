@@ -5,8 +5,9 @@ export type AgentKind =
   | 'LoopAgent'
   | 'Tool'
   | 'McpToolset'
+  | 'ObservationSet'
 
-export type EdgeKind = 'sub_agent' | 'tool'
+export type EdgeKind = 'sub_agent' | 'delegate' | 'tool'
 
 // ─── Per-node data shapes ────────────────────────────────────────────────────
 
@@ -57,6 +58,16 @@ export interface McpToolsetData extends Record<string, unknown> {
   tool_filter: string
 }
 
+export interface ObservationSetData extends Record<string, unknown> {
+  kind: 'ObservationSet'
+  /** Display label shown on the frame */
+  name: string
+  /** Name of the LlmAgent this scope belongs to */
+  for_agent: string
+  /** Color accent for the frame border */
+  color: string
+}
+
 export type NodeData =
   | LlmAgentData
   | SequentialAgentData
@@ -64,6 +75,7 @@ export type NodeData =
   | LoopAgentData
   | ToolData
   | McpToolsetData
+  | ObservationSetData
 
 // ─── Palette entry (what shows up in the left sidebar) ───────────────────────
 
@@ -118,6 +130,13 @@ export const PALETTE_ITEMS: PaletteItem[] = [
     color: '#14b8a6',
     icon: '🔌',
   },
+  {
+    kind: 'ObservationSet',
+    label: 'Observation Set',
+    description: 'Visual scope: nodes available to an LLM agent',
+    color: '#e879f9',
+    icon: '👁️',
+  },
 ]
 
 // ─── Default data for each kind ──────────────────────────────────────────────
@@ -154,6 +173,13 @@ export function defaultData(kind: AgentKind): NodeData {
         args: '',
         tool_filter: '',
       }
+    case 'ObservationSet':
+      return {
+        kind,
+        name: 'Observation Set',
+        for_agent: '',
+        color: '#e879f9',
+      }
   }
 }
 
@@ -165,4 +191,34 @@ export function kindColor(kind: AgentKind): string {
 
 export function kindIcon(kind: AgentKind): string {
   return PALETTE_ITEMS.find((p) => p.kind === kind)?.icon ?? '?'
+}
+
+// ─── Edge color lookup ────────────────────────────────────────────────────────
+// Determines edge appearance based on source and target node kinds.
+
+export type EdgeStyle = {
+  color: string
+  dashed: boolean
+  animated: boolean
+  kind: EdgeKind
+}
+
+const TOOL_KINDS: AgentKind[] = ['Tool', 'McpToolset']
+const WORKFLOW_KINDS: AgentKind[] = ['SequentialAgent', 'ParallelAgent', 'LoopAgent']
+
+export function edgeStyle(sourceKind?: AgentKind, targetKind?: AgentKind): EdgeStyle {
+  if (targetKind && TOOL_KINDS.includes(targetKind)) {
+    // Any → Tool/MCP: teal dashed
+    return { color: '#14b8a6', dashed: true, animated: false, kind: 'tool' }
+  }
+  if (sourceKind === 'LlmAgent') {
+    // LLM → agent (workflow or another LLM): orange solid
+    return { color: '#f97316', dashed: false, animated: false, kind: 'delegate' }
+  }
+  if (sourceKind && WORKFLOW_KINDS.includes(sourceKind)) {
+    // Workflow → sub-agent: indigo animated
+    return { color: '#6366f1', dashed: false, animated: true, kind: 'sub_agent' }
+  }
+  // Fallback
+  return { color: '#94a3b8', dashed: false, animated: false, kind: 'sub_agent' }
 }

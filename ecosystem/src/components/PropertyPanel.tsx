@@ -38,8 +38,8 @@ export default function PropertyPanel({ node, onChange, onDelete }: PropertyPane
       </div>
 
       <div className="pp-fields">
-        {/* ── Common name field ── */}
-        <Field label="Name">
+        {/* ── Common name / label field ── */}
+        <Field label={data.kind === 'ObservationSet' ? 'Label' : 'Name'}>
           <input
             value={data.name}
             onChange={(e) => update({ name: e.target.value } as Partial<NodeData>)}
@@ -166,6 +166,33 @@ export default function PropertyPanel({ node, onChange, onDelete }: PropertyPane
                 placeholder="e.g. fetch, search (empty = all)"
               />
             </Field>
+          </>
+        )}
+
+        {/* ── ObservationSet ── */}
+        {data.kind === 'ObservationSet' && (
+          <>
+            <Field label="For agent">
+              <input
+                value={data.for_agent}
+                onChange={(e) => update({ for_agent: e.target.value } as Partial<NodeData>)}
+                placeholder="Name of the LLM agent this scope belongs to"
+              />
+            </Field>
+            <Field label="Frame color">
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                <input
+                  type="color"
+                  value={data.color as string}
+                  onChange={(e) => update({ color: e.target.value } as Partial<NodeData>)}
+                  style={{ width: 36, height: 28, padding: 2, cursor: 'pointer' }}
+                />
+                <span style={{ fontSize: 11, color: '#64748b' }}>{data.color as string}</span>
+              </div>
+            </Field>
+            <p style={{ fontSize: 11, color: '#475569', lineHeight: 1.5, marginTop: 4 }}>
+              Drag this frame behind the nodes that are visible to the named agent. Resize by selecting and dragging the corners.
+            </p>
           </>
         )}
       </div>
