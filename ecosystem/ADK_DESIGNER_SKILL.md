@@ -41,6 +41,7 @@ npm run preview    # serves the build locally
 | 🔄 Loop | Orange | `LoopAgent` | Iterates sub-agents until exit signal or max iterations |
 | 🔧 Tool | Gray | Python function | Custom callable tool for an LlmAgent |
 | 🔌 MCP Toolset | Teal | `McpToolset` | Connects an external MCP server to an LlmAgent |
+| 🧠 Observation Set | Pink | (Memory Tool) | Represents persistent knowledge graph entities or observations |
 
 ## How to Use
 - status: active
@@ -58,6 +59,9 @@ npm run preview    # serves the build locally
 ### Edge types
 - **Sub-agent edge** (solid animated line): connects a workflow agent to its child agents. Draw from the **bottom handle** of the parent.
 - **Tool edge** (dashed line): connects a Tool or McpToolset to an LlmAgent. Draw from the **right handle** of the LlmAgent.
+
+### Observation Sets & Memory
+The **Observation Set** node represents persistent facts managed by the **MCP Memory Server** (`@modelcontextprotocol/server-memory`). You can visually connect these nodes to represent state or facts that an `LlmAgent` should read from or write to the knowledge graph, giving the pipeline cross-session memory.
 
 ### Saving & loading
 - **Save** stores the current canvas as JSON in `localStorage`.
