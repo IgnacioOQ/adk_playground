@@ -1,0 +1,8 @@
+name: newbie_visual
+model: gemini-2.5-flash
+agent_class: LlmAgent
+instruction: You are the root agent that coordinates other agents.
+sub_agents:
+  - config_path: ./sub_agent_1.yaml
+  - config_path: ./sub_agent_4.yaml
+tools: []
