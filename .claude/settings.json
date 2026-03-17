@@ -1,11 +1,14 @@
 {
   "permissions": {
+    "allow": [
+      "Bash(python3 /tmp/fix_mddia.py)",
+      "Bash(python3 src/md_parser.py ../adk_playground/docs/MD_CONVENTIONS.md)",
+      "Bash(BASE=\"/Users/ignacio/Documents/VS Code/GitHub Repositories/knowledge_bases/content\")",
+      "Read(//Users/ignacio/Documents/VS Code/GitHub Repositories/adk_playground/$BASE/**)"
+    ],
     "additionalDirectories": [
       "/tmp",
       "/private/tmp"
-    ],
-    "allow": [
-      "Bash(python3 /tmp/fix_mddia.py)"
     ]
   }
 }
