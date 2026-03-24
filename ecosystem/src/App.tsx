@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ReactFlow,
   addEdge,
@@ -12,6 +12,7 @@ import {
   type Node,
   type Edge,
   type NodeTypes,
+  type EdgeTypes,
   BackgroundVariant,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
@@ -29,6 +30,7 @@ import McpToolsetNode from './nodes/McpToolsetNode'
 import ObservationSetNode from './nodes/ObservationSetNode'
 import HumanNode from './nodes/HumanNode'
 import EvaluatorNode from './nodes/EvaluatorNode'
+import FlowEdge from './edges/FlowEdge'
 
 import NodePalette from './components/NodePalette'
 import PropertyPanel from './components/PropertyPanel'
@@ -48,11 +50,18 @@ const nodeTypes: NodeTypes = {
   Evaluator: EvaluatorNode,
 }
 
+const edgeTypes: EdgeTypes = {
+  flow: FlowEdge,
+}
+
 const INITIAL_NODES: Node<NodeData>[] = []
 const INITIAL_EDGES: Edge[] = []
 
 // ObservationSet nodes need an initial size
 const OBS_SET_DEFAULTS = { style: { width: 320, height: 220 }, zIndex: -1 }
+
+// Kinds that sit at the boundary of the pipeline and don't need outgoing edges
+const TERMINAL_KINDS: AgentKind[] = ['Human', 'ObservationSet']
 
 export default function App() {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<NodeData>>(INITIAL_NODES)
@@ -67,6 +76,27 @@ export default function App() {
 
   const selectedNode = nodes.find((n) => n.id === selectedNodeId) ?? null
 
+  // ── Stuck node detection ───────────────────────────────────────────────────
+  // A node is "stuck" (dead-end) if it has no outgoing edges and is not a
+  // terminal kind. This flags incomplete pipelines where flow has nowhere to go.
+  const stuckNodeIds = useMemo(() => {
+    const hasOutgoing = new Set(edges.map((e) => e.source))
+    return nodes
+      .filter((n) => !TERMINAL_KINDS.includes(n.data.kind) && !hasOutgoing.has(n.id))
+      .map((n) => n.id)
+  }, [nodes, edges])
+
+  // Merge stuck class into nodes for rendering without mutating state
+  const displayNodes = useMemo(() =>
+    nodes.map((n) => ({
+      ...n,
+      className: [n.className, stuckNodeIds.includes(n.id) ? 'node-stuck' : '']
+        .filter(Boolean)
+        .join(' '),
+    })),
+    [nodes, stuckNodeIds],
+  )
+
   // ── Connections ────────────────────────────────────────────────────────────
   const onConnect: OnConnect = useCallback(
     (connection) => {
@@ -74,15 +104,18 @@ export default function App() {
       const targetKind = nodesRef.current.find((n) => n.id === connection.target)?.data.kind
       const style = edgeStyle(sourceKind, targetKind)
 
+      const isObservation =
+        sourceKind === 'ObservationSet' || targetKind === 'ObservationSet'
+
       const edge: Edge = {
         ...connection,
         id: `e-${connection.source}-${connection.target}-${Date.now()}`,
-        data: { kind: style.kind },
+        type: isObservation ? undefined : 'flow',
+        data: { kind: style.kind, isObservation },
         style: {
           stroke: style.color,
           strokeDasharray: style.dashed ? '6,4' : undefined,
         },
-        animated: style.animated,
         markerEnd: { type: 'arrowclosed' as const, color: style.color },
       }
       setEdges((eds) => addEdge(edge, eds))
@@ -184,7 +217,7 @@ export default function App() {
 
         <div className="canvas-wrapper" ref={reactFlowWrapper}>
           <ReactFlow
-            nodes={nodes}
+            nodes={displayNodes}
             edges={edges}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
@@ -194,6 +227,7 @@ export default function App() {
             onNodeClick={onNodeClick}
             onPaneClick={onPaneClick}
             nodeTypes={nodeTypes}
+            edgeTypes={edgeTypes}
             onInit={(inst) => setReactFlowInstance(inst as never)}
             connectionMode={ConnectionMode.Loose}
             fitView

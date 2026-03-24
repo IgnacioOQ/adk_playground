@@ -29,6 +29,19 @@
   border: 1px solid #6366f1;
 }
 
+/* Stuck node — dead-end in the flow graph (has no outgoing edges) */
+.react-flow__node.node-stuck > div {
+  box-shadow:
+    0 0 0 2px #f59e0b,
+    0 0 12px #f59e0b40 !important;
+  animation: stuck-pulse 2s ease-in-out infinite;
+}
+
+@keyframes stuck-pulse {
+  0%, 100% { box-shadow: 0 0 0 2px #f59e0b, 0 0 6px #f59e0b30; }
+  50%       { box-shadow: 0 0 0 2px #f59e0b, 0 0 16px #f59e0b60; }
+}
+
 /* Scrollbar styling */
 ::-webkit-scrollbar {
   width: 6px;
