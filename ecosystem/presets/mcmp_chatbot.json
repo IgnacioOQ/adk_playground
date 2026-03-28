@@ -1,0 +1,334 @@
+{
+  "_meta": {
+    "name": "MCMP Chatbot",
+    "description": "Visual abstraction of the MCMP Chatbot (mcmp_chatbot repo): Leopold LLM agent with MCP tools querying JSON data files and an institutional graph, plus a scraper orchestrator pipeline that keeps the data fresh.",
+    "source_repo": "mcmp_chatbot",
+    "created": "2026-03-28"
+  },
+  "nodes": [
+    {
+      "id": "human",
+      "type": "Human",
+      "position": { "x": 50, "y": 300 },
+      "data": {
+        "kind": "Human",
+        "name": "user_query",
+        "description": "MCMP website visitor asking about events, people, or research topics via the Streamlit chat interface.",
+        "prompt": "Ask me about MCMP events, researchers, or philosophy topics."
+      }
+    },
+    {
+      "id": "leopold",
+      "type": "LlmAgent",
+      "position": { "x": 320, "y": 300 },
+      "data": {
+        "kind": "LlmAgent",
+        "name": "leopold",
+        "model": "gemini-2.5-flash",
+        "description": "Leopold — MCMP Philosophy Assistant. Answers questions about events, people, and research using MCP-backed structured data tools.",
+        "instruction": "You are Leopold, the MCMP Philosophy Assistant. Use the available tools to answer questions about MCMP events, people, and research topics. Always use tools for structured data queries rather than relying on general knowledge.",
+        "output_key": "response"
+      }
+    },
+    {
+      "id": "personality",
+      "type": "Context",
+      "position": { "x": 320, "y": 560 },
+      "data": {
+        "kind": "Context",
+        "name": "leopold_personality",
+        "description": "Leopold persona definition: identity, philosophical tone, scope boundaries, and behavioral guidelines injected into the system prompt.",
+        "content": "prompts/personality.md — Leopold's identity, tone, and response constraints. Separates chatbot character from engine logic."
+      }
+    },
+    {
+      "id": "tool_search_people",
+      "type": "Tool",
+      "position": { "x": 650, "y": 80 },
+      "data": {
+        "kind": "Tool",
+        "name": "search_people",
+        "description": "Searches people.json for MCMP researchers by name, role, or research area. Returns full profiles including email, office, publications.",
+        "code": "    # src/mcp/tools.py\n    return search_json('data/people.json', query)"
+      }
+    },
+    {
+      "id": "tool_search_research",
+      "type": "Tool",
+      "position": { "x": 650, "y": 220 },
+      "data": {
+        "kind": "Tool",
+        "name": "search_research",
+        "description": "Searches research.json for MCMP research areas and subtopics. Returns hierarchical structure linking topics to people.",
+        "code": "    # src/mcp/tools.py\n    return search_json('data/research.json', query)"
+      }
+    },
+    {
+      "id": "tool_get_events",
+      "type": "Tool",
+      "position": { "x": 650, "y": 360 },
+      "data": {
+        "kind": "Tool",
+        "name": "get_events",
+        "description": "Retrieves upcoming MCMP events from raw_events.json. Supports date-range and keyword filtering.",
+        "code": "    # src/mcp/tools.py\n    return filter_events('data/raw_events.json', query)"
+      }
+    },
+    {
+      "id": "tool_search_graph",
+      "type": "Tool",
+      "position": { "x": 650, "y": 500 },
+      "data": {
+        "kind": "Tool",
+        "name": "search_graph",
+        "description": "Queries the MCMP institutional knowledge graph to resolve organizational relationships: chairs, leadership hierarchies, and supervision links.",
+        "code": "    # src/mcp/tools.py\n    return query_graph('data/graph/mcmp_jgraph.json', query)"
+      }
+    },
+    {
+      "id": "db_json",
+      "type": "Database",
+      "position": { "x": 970, "y": 220 },
+      "data": {
+        "kind": "Database",
+        "name": "json_data_files",
+        "description": "Structured JSON datasets: people.json, research.json, raw_events.json. Accumulated monotonically by the scraper. Source of truth for all MCP queries.",
+        "db_type": "JSON Files",
+        "connection": "data/"
+      }
+    },
+    {
+      "id": "db_graph",
+      "type": "Database",
+      "position": { "x": 970, "y": 500 },
+      "data": {
+        "kind": "Database",
+        "name": "institutional_graph",
+        "description": "Knowledge graph linking MCMP people to organizational units (chairs, leadership) and research topics. Stored as mcmp_graph.md + mcmp_jgraph.json.",
+        "db_type": "Graph (JSON + MD)",
+        "connection": "data/graph/"
+      }
+    },
+    {
+      "id": "scraper_agent",
+      "type": "LlmAgent",
+      "position": { "x": 50, "y": 950 },
+      "data": {
+        "kind": "LlmAgent",
+        "name": "scraper_orchestrator",
+        "model": "gemini-2.5-flash",
+        "description": "Orchestrates the MCMP website scraping pipeline. Runs scrape_events, scrape_people, scrape_research, and build_graph tools to refresh all datasets.",
+        "instruction": "Run the full data update pipeline. Use scrape_events, scrape_people, scrape_research, and build_graph tools in sequence. Existing data is never removed — only updated or extended.",
+        "output_key": "scrape_result"
+      }
+    },
+    {
+      "id": "tool_scrape_events",
+      "type": "Tool",
+      "position": { "x": 380, "y": 800 },
+      "data": {
+        "kind": "Tool",
+        "name": "scrape_events",
+        "description": "Scrapes MCMP website for upcoming talks, reading groups, and workshops. Accumulates raw_events.json.",
+        "code": "    # scripts/update_dataset.py → scrape_events()\n    return scrape_mcmp_events()"
+      }
+    },
+    {
+      "id": "tool_scrape_people",
+      "type": "Tool",
+      "position": { "x": 380, "y": 940 },
+      "data": {
+        "kind": "Tool",
+        "name": "scrape_people",
+        "description": "Scrapes MCMP people pages. Enriches people.json with profiles, emails, office locations, hierarchical roles, and publication lists.",
+        "code": "    # scripts/update_dataset.py → scrape_people()\n    return scrape_mcmp_people()"
+      }
+    },
+    {
+      "id": "tool_scrape_research",
+      "type": "Tool",
+      "position": { "x": 380, "y": 1080 },
+      "data": {
+        "kind": "Tool",
+        "name": "scrape_research",
+        "description": "Scrapes MCMP research area pages. Updates research.json with hierarchical topic structure and links to people.",
+        "code": "    # scripts/update_dataset.py → scrape_research()\n    return scrape_mcmp_research()"
+      }
+    },
+    {
+      "id": "tool_build_graph",
+      "type": "Tool",
+      "position": { "x": 380, "y": 1220 },
+      "data": {
+        "kind": "Tool",
+        "name": "build_graph",
+        "description": "Rebuilds the institutional graph from updated people and research data. Outputs mcmp_graph.md and mcmp_jgraph.json.",
+        "code": "    # scripts/update_dataset.py → build_graph()\n    return build_institutional_graph()"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-human-leopold",
+      "source": "human",
+      "target": "leopold",
+      "type": "flow",
+      "data": { "kind": "delegate", "isObservation": false },
+      "style": { "stroke": "#f97316" },
+      "markerEnd": { "type": "arrowclosed", "color": "#f97316" },
+      "markerStart": { "type": "arrowclosed", "color": "#f97316" }
+    },
+    {
+      "id": "e-leopold-tool_search_people",
+      "source": "leopold",
+      "target": "tool_search_people",
+      "type": "flow",
+      "data": { "kind": "tool", "isObservation": false },
+      "style": { "stroke": "#14b8a6", "strokeDasharray": "6,4" },
+      "markerEnd": { "type": "arrowclosed", "color": "#14b8a6" },
+      "markerStart": { "type": "arrowclosed", "color": "#14b8a6" }
+    },
+    {
+      "id": "e-leopold-tool_search_research",
+      "source": "leopold",
+      "target": "tool_search_research",
+      "type": "flow",
+      "data": { "kind": "tool", "isObservation": false },
+      "style": { "stroke": "#14b8a6", "strokeDasharray": "6,4" },
+      "markerEnd": { "type": "arrowclosed", "color": "#14b8a6" },
+      "markerStart": { "type": "arrowclosed", "color": "#14b8a6" }
+    },
+    {
+      "id": "e-leopold-tool_get_events",
+      "source": "leopold",
+      "target": "tool_get_events",
+      "type": "flow",
+      "data": { "kind": "tool", "isObservation": false },
+      "style": { "stroke": "#14b8a6", "strokeDasharray": "6,4" },
+      "markerEnd": { "type": "arrowclosed", "color": "#14b8a6" },
+      "markerStart": { "type": "arrowclosed", "color": "#14b8a6" }
+    },
+    {
+      "id": "e-leopold-tool_search_graph",
+      "source": "leopold",
+      "target": "tool_search_graph",
+      "type": "flow",
+      "data": { "kind": "tool", "isObservation": false },
+      "style": { "stroke": "#14b8a6", "strokeDasharray": "6,4" },
+      "markerEnd": { "type": "arrowclosed", "color": "#14b8a6" },
+      "markerStart": { "type": "arrowclosed", "color": "#14b8a6" }
+    },
+    {
+      "id": "e-leopold-personality",
+      "source": "leopold",
+      "target": "personality",
+      "data": { "kind": "sub_agent", "isObservation": true },
+      "style": { "stroke": "#94a3b8" },
+      "markerEnd": { "type": "arrowclosed", "color": "#94a3b8" }
+    },
+    {
+      "id": "e-tool_search_people-db_json",
+      "source": "tool_search_people",
+      "target": "db_json",
+      "data": { "kind": "sub_agent", "isObservation": true },
+      "style": { "stroke": "#94a3b8" },
+      "markerEnd": { "type": "arrowclosed", "color": "#94a3b8" }
+    },
+    {
+      "id": "e-tool_search_research-db_json",
+      "source": "tool_search_research",
+      "target": "db_json",
+      "data": { "kind": "sub_agent", "isObservation": true },
+      "style": { "stroke": "#94a3b8" },
+      "markerEnd": { "type": "arrowclosed", "color": "#94a3b8" }
+    },
+    {
+      "id": "e-tool_get_events-db_json",
+      "source": "tool_get_events",
+      "target": "db_json",
+      "data": { "kind": "sub_agent", "isObservation": true },
+      "style": { "stroke": "#94a3b8" },
+      "markerEnd": { "type": "arrowclosed", "color": "#94a3b8" }
+    },
+    {
+      "id": "e-tool_search_graph-db_graph",
+      "source": "tool_search_graph",
+      "target": "db_graph",
+      "data": { "kind": "sub_agent", "isObservation": true },
+      "style": { "stroke": "#94a3b8" },
+      "markerEnd": { "type": "arrowclosed", "color": "#94a3b8" }
+    },
+    {
+      "id": "e-scraper-scrape_events",
+      "source": "scraper_agent",
+      "target": "tool_scrape_events",
+      "type": "flow",
+      "data": { "kind": "tool", "isObservation": false },
+      "style": { "stroke": "#14b8a6", "strokeDasharray": "6,4" },
+      "markerEnd": { "type": "arrowclosed", "color": "#14b8a6" },
+      "markerStart": { "type": "arrowclosed", "color": "#14b8a6" }
+    },
+    {
+      "id": "e-scraper-scrape_people",
+      "source": "scraper_agent",
+      "target": "tool_scrape_people",
+      "type": "flow",
+      "data": { "kind": "tool", "isObservation": false },
+      "style": { "stroke": "#14b8a6", "strokeDasharray": "6,4" },
+      "markerEnd": { "type": "arrowclosed", "color": "#14b8a6" },
+      "markerStart": { "type": "arrowclosed", "color": "#14b8a6" }
+    },
+    {
+      "id": "e-scraper-scrape_research",
+      "source": "scraper_agent",
+      "target": "tool_scrape_research",
+      "type": "flow",
+      "data": { "kind": "tool", "isObservation": false },
+      "style": { "stroke": "#14b8a6", "strokeDasharray": "6,4" },
+      "markerEnd": { "type": "arrowclosed", "color": "#14b8a6" },
+      "markerStart": { "type": "arrowclosed", "color": "#14b8a6" }
+    },
+    {
+      "id": "e-scraper-build_graph",
+      "source": "scraper_agent",
+      "target": "tool_build_graph",
+      "type": "flow",
+      "data": { "kind": "tool", "isObservation": false },
+      "style": { "stroke": "#14b8a6", "strokeDasharray": "6,4" },
+      "markerEnd": { "type": "arrowclosed", "color": "#14b8a6" },
+      "markerStart": { "type": "arrowclosed", "color": "#14b8a6" }
+    },
+    {
+      "id": "e-tool_scrape_events-db_json",
+      "source": "tool_scrape_events",
+      "target": "db_json",
+      "data": { "kind": "sub_agent", "isObservation": true },
+      "style": { "stroke": "#94a3b8" },
+      "markerEnd": { "type": "arrowclosed", "color": "#94a3b8" }
+    },
+    {
+      "id": "e-tool_scrape_people-db_json",
+      "source": "tool_scrape_people",
+      "target": "db_json",
+      "data": { "kind": "sub_agent", "isObservation": true },
+      "style": { "stroke": "#94a3b8" },
+      "markerEnd": { "type": "arrowclosed", "color": "#94a3b8" }
+    },
+    {
+      "id": "e-tool_scrape_research-db_json",
+      "source": "tool_scrape_research",
+      "target": "db_json",
+      "data": { "kind": "sub_agent", "isObservation": true },
+      "style": { "stroke": "#94a3b8" },
+      "markerEnd": { "type": "arrowclosed", "color": "#94a3b8" }
+    },
+    {
+      "id": "e-tool_build_graph-db_graph",
+      "source": "tool_build_graph",
+      "target": "db_graph",
+      "data": { "kind": "sub_agent", "isObservation": true },
+      "style": { "stroke": "#94a3b8" },
+      "markerEnd": { "type": "arrowclosed", "color": "#94a3b8" }
+    }
+  ]
+}

@@ -120,6 +120,9 @@ export default function App() {
           strokeDasharray: style.dashed ? '6,4' : undefined,
         },
         markerEnd: { type: 'arrowclosed' as const, color: style.color },
+        markerStart: (!isObservation && style.bidirectional)
+          ? { type: 'arrowclosed' as const, color: style.color }
+          : undefined,
       }
       setEdges((eds) => addEdge(edge, eds))
     },
@@ -209,9 +212,16 @@ export default function App() {
     }
   }
 
+  function handleLoadFile(n: Node<NodeData>[], e: Edge[]) {
+    if (nodes.length > 0 && !confirm('Replace current canvas with the loaded preset?')) return
+    setNodes(n)
+    setEdges(e)
+    setSelectedNodeId(null)
+  }
+
   return (
     <div className="app">
-      <Toolbar nodes={nodes} edges={edges} onNew={handleNew} onSave={handleSave} onLoad={handleLoad} />
+      <Toolbar nodes={nodes} edges={edges} onNew={handleNew} onSave={handleSave} onLoad={handleLoad} onLoadFile={handleLoadFile} />
 
       <div className="app-body">
         <NodePalette onDragStart={onDragStart} />
