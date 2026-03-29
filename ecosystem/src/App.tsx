@@ -124,11 +124,13 @@ export default function App() {
       }
 
       if (!isObservation) {
-        // Paired return edge: same color, dimmer particles, dashed line
+        // Paired return edge: routes via bottom handles so it curves below the forward edge
         const returnEdge: Edge = {
           id: `e-ret-${connection.target}-${connection.source}-${ts}`,
           source: connection.target!,
           target: connection.source!,
+          sourceHandle: 'bottom',
+          targetHandle: 'bottom',
           type: 'flow',
           data: { kind: 'response', isObservation: false, isReturn: true },
           style: {
