@@ -8,13 +8,15 @@ interface ToolbarProps {
   nodes: Node<NodeData>[]
   edges: Edge[]
   presetMeta: PresetMeta | null
+  selectMode: boolean
+  onSelectModeToggle: () => void
   onNew: () => void
   onSave: () => void
   onLoad: () => void
   onLoadFile: (nodes: Node<NodeData>[], edges: Edge[], meta: PresetMeta) => void
 }
 
-export default function Toolbar({ nodes, edges, presetMeta, onNew, onSave, onLoad, onLoadFile }: ToolbarProps) {
+export default function Toolbar({ nodes, edges, presetMeta, selectMode, onSelectModeToggle, onNew, onSave, onLoad, onLoadFile }: ToolbarProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
@@ -68,6 +70,14 @@ export default function Toolbar({ nodes, edges, presetMeta, onNew, onSave, onLoa
         <span className="toolbar-title">ADK Agent Designer</span>
       </div>
       <div className="toolbar-actions">
+        <button
+          className={`toolbar-btn${selectMode ? ' toolbar-btn-active' : ''}`}
+          onClick={onSelectModeToggle}
+          title={selectMode ? 'Switch to Pan mode (drag canvas to pan)' : 'Switch to Select mode (drag canvas to select area)'}
+        >
+          {selectMode ? '⬚ Select' : '✥ Pan'}
+        </button>
+        <div style={{ width: 1, background: '#2d3148', margin: '6px 0' }} />
         <button className="toolbar-btn" onClick={onNew} title="Clear canvas">
           New
         </button>

@@ -72,6 +72,7 @@ export default function App() {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null)
   const [presetMeta, setPresetMeta] = useState<PresetMeta | null>(null)
+  const [selectMode, setSelectMode] = useState(false)
   const reactFlowWrapper = useRef<HTMLDivElement>(null)
   const [reactFlowInstance, setReactFlowInstance] = useState<ReturnType<typeof import('@xyflow/react').useReactFlow> | null>(null)
   const idCounter = useRef(1)
@@ -262,12 +263,12 @@ export default function App() {
 
   return (
     <div className="app">
-      <Toolbar nodes={nodes} edges={edges} presetMeta={presetMeta} onNew={handleNew} onSave={handleSave} onLoad={handleLoad} onLoadFile={handleLoadFile} />
+      <Toolbar nodes={nodes} edges={edges} presetMeta={presetMeta} selectMode={selectMode} onSelectModeToggle={() => setSelectMode((m) => !m)} onNew={handleNew} onSave={handleSave} onLoad={handleLoad} onLoadFile={handleLoadFile} />
 
       <div className="app-body">
         <NodePalette onDragStart={onDragStart} />
 
-        <div className="canvas-wrapper" ref={reactFlowWrapper}>
+        <div className="canvas-wrapper" ref={reactFlowWrapper} style={{ cursor: selectMode ? 'crosshair' : undefined }}>
           <ReactFlow
             nodes={displayNodes}
             edges={edges}
@@ -283,6 +284,8 @@ export default function App() {
             edgeTypes={edgeTypes}
             onInit={(inst) => setReactFlowInstance(inst as never)}
             connectionMode={ConnectionMode.Loose}
+            selectionOnDrag={selectMode}
+            panOnDrag={!selectMode}
             fitView
             deleteKeyCode="Delete"
             colorMode="dark"

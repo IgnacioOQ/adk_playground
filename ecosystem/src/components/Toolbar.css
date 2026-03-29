@@ -60,3 +60,14 @@
   background: #4338ca;
   border-color: #4338ca;
 }
+
+.toolbar-btn-active {
+  background: #1e3a5f;
+  border-color: #3b82f6;
+  color: #93c5fd;
+}
+
+.toolbar-btn-active:hover {
+  background: #1e3a5f;
+  color: #bfdbfe;
+}
