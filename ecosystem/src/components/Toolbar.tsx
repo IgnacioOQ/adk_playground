@@ -14,25 +14,46 @@ interface ToolbarProps {
   onSave: () => void
   onLoad: () => void
   onLoadFile: (nodes: Node<NodeData>[], edges: Edge[], meta: PresetMeta) => void
+  onImportFile: (nodes: Node<NodeData>[], edges: Edge[], meta: PresetMeta) => void
 }
 
-export default function Toolbar({ nodes, edges, presetMeta, selectMode, onSelectModeToggle, onNew, onSave, onLoad, onLoadFile }: ToolbarProps) {
+export default function Toolbar({ nodes, edges, presetMeta, selectMode, onSelectModeToggle, onNew, onSave, onLoad, onLoadFile, onImportFile }: ToolbarProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const importInputRef = useRef<HTMLInputElement>(null)
+
+  function parsePresetFile(file: File): Promise<{ nodes: Node<NodeData>[]; edges: Edge[]; meta: PresetMeta }> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        try {
+          const json = JSON.parse(e.target?.result as string)
+          if (!json.nodes || !json.edges) throw new Error('Missing nodes or edges')
+          const meta: PresetMeta = json._meta ?? { name: file.name.replace('.json', '') }
+          resolve({ nodes: json.nodes, edges: json.edges, meta })
+        } catch (err) {
+          reject(err)
+        }
+      }
+      reader.onerror = reject
+      reader.readAsText(file)
+    })
+  }
 
   function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
     if (!file) return
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      try {
-        const json = JSON.parse(e.target?.result as string)
-        if (!json.nodes || !json.edges) throw new Error('Missing nodes or edges')
-        onLoadFile(json.nodes, json.edges, json._meta ?? { name: file.name.replace('.json', '') })
-      } catch {
-        alert('Failed to load preset: invalid JSON format.')
-      }
-    }
-    reader.readAsText(file)
+    parsePresetFile(file)
+      .then(({ nodes, edges, meta }) => onLoadFile(nodes, edges, meta))
+      .catch(() => alert('Failed to load preset: invalid JSON format.'))
+    event.target.value = ''
+  }
+
+  function handleImportChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    if (!file) return
+    parsePresetFile(file)
+      .then(({ nodes, edges, meta }) => onImportFile(nodes, edges, meta))
+      .catch(() => alert('Failed to import preset: invalid JSON format.'))
     event.target.value = ''
   }
 
@@ -87,16 +108,14 @@ export default function Toolbar({ nodes, edges, presetMeta, selectMode, onSelect
         <button className="toolbar-btn" onClick={onLoad} title="Load from browser storage">
           Load
         </button>
-        <button className="toolbar-btn" onClick={() => fileInputRef.current?.click()} title="Load a preset JSON file">
+        <button className="toolbar-btn" onClick={() => fileInputRef.current?.click()} title="Replace canvas with a preset JSON file">
           Load File
         </button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".json"
-          style={{ display: 'none' }}
-          onChange={handleFileChange}
-        />
+        <input ref={fileInputRef} type="file" accept=".json" style={{ display: 'none' }} onChange={handleFileChange} />
+        <button className="toolbar-btn" onClick={() => importInputRef.current?.click()} title="Merge a preset JSON file into the current canvas">
+          Import
+        </button>
+        <input ref={importInputRef} type="file" accept=".json" style={{ display: 'none' }} onChange={handleImportChange} />
         <button className="toolbar-btn" onClick={handleExportPreset} title="Export canvas as preset JSON">
           Export Preset
         </button>

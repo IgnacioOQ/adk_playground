@@ -261,9 +261,39 @@ export default function App() {
     setSelectedEdgeId(null)
   }
 
+  function handleImportFile(n: Node<NodeData>[], e: Edge[], meta: PresetMeta) {
+    // Namespace all IDs with the preset name to avoid collisions
+    const prefix = meta.name.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '') || 'import'
+    const idMap: Record<string, string> = {}
+    for (const node of n) {
+      idMap[node.id] = `${prefix}__${node.id}`
+    }
+
+    // Offset position so the imported nodes don't land exactly on top of existing ones
+    const existingXs = nodes.map((nd) => nd.position.x)
+    const maxX = existingXs.length > 0 ? Math.max(...existingXs) : 0
+    const offsetX = nodes.length > 0 ? maxX + 400 : 0
+
+    const remappedNodes = n.map((node) => ({
+      ...node,
+      id: idMap[node.id],
+      position: { x: node.position.x + offsetX, y: node.position.y },
+    }))
+
+    const remappedEdges = e.map((edge) => ({
+      ...edge,
+      id: `${prefix}__${edge.id}`,
+      source: idMap[edge.source] ?? `${prefix}__${edge.source}`,
+      target: idMap[edge.target] ?? `${prefix}__${edge.target}`,
+    }))
+
+    setNodes((nds) => nds.concat(remappedNodes))
+    setEdges((eds) => eds.concat(remappedEdges))
+  }
+
   return (
     <div className="app">
-      <Toolbar nodes={nodes} edges={edges} presetMeta={presetMeta} selectMode={selectMode} onSelectModeToggle={() => setSelectMode((m) => !m)} onNew={handleNew} onSave={handleSave} onLoad={handleLoad} onLoadFile={handleLoadFile} />
+      <Toolbar nodes={nodes} edges={edges} presetMeta={presetMeta} selectMode={selectMode} onSelectModeToggle={() => setSelectMode((m) => !m)} onNew={handleNew} onSave={handleSave} onLoad={handleLoad} onLoadFile={handleLoadFile} onImportFile={handleImportFile} />
 
       <div className="app-body">
         <NodePalette onDragStart={onDragStart} />
