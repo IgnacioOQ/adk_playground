@@ -4,7 +4,7 @@
 - label: [normative, template, backend, frontend]
 - injection: directive
 - volatility: stable
-- last_checked: 2026-04-05
+- last_checked: 2026-04-06
 <!-- content -->
 
 ## Overview
@@ -90,7 +90,7 @@ source .venv/bin/activate
 uvicorn main:app --reload --port 8080
 ```
 
-Verify it is up: `http://localhost:8080/health` → `{"status":"ok","agent":"chatbot_agent"}`
+Verify it is up: `http://localhost:8080/health` → `{"status":"ok","agent":"rocky_rps_agent"}`
 
 ### Frontend Setup (first time)
 
@@ -136,6 +136,7 @@ Starts both servers in the background and prints their PIDs. Press `Ctrl+C` to s
 | A2UI JSON renders as raw text | LLM wraps JSON in markdown code fences (` ```json ``` `) | Strip fences in `_parse_response` before `json.loads` — already handled in `main.py` |
 | `next.config.ts` not supported | Next.js 14 doesn't support `.ts` config | Rename to `next.config.mjs` and remove TypeScript types |
 | `/ 200` but browser shows nothing | Next.js still compiling on first load | Wait for `✓ Compiled /` in terminal, then refresh |
+| `Could not import module "main"` | uvicorn run from wrong directory | Must run from `backend/`: `cd chatbot_template/backend && uvicorn main:app ...` |
 
 ### Rotating the API Key
 
@@ -155,13 +156,18 @@ Starts both servers in the background and prints their PIDs. Press `Ctrl+C` to s
 
 ```
 chatbot_template/
+├── dev.sh                          # starts both servers with one command
 ├── backend/
 │   ├── agent/
 │   │   ├── __init__.py
-│   │   ├── agent.py          # root_agent definition
-│   │   ├── imports.py        # centralized ADK imports
-│   │   └── tools/            # custom tool functions
-│   ├── main.py               # FastAPI app — /chat and /stream endpoints
+│   │   ├── agent.py          # root_agent (Rocky RPS agent)
+│   │   ├── imports.py        # centralized ADK + McpToolset imports
+│   │   └── tools/            # custom tool functions (future use)
+│   ├── mcp_servers/
+│   │   ├── __init__.py
+│   │   ├── rps_memory_server.py   # FastMCP server — session game history
+│   │   └── data/                  # per-session JSON files (git-ignored)
+│   ├── main.py               # FastAPI app — /chat, /stream, /health
 │   ├── requirements.txt
 │   ├── Dockerfile
 │   └── .env                  # GOOGLE_API_KEY (git-ignored)
@@ -172,9 +178,11 @@ chatbot_template/
     │   │   ├── MessageBubble.tsx
     │   │   └── A2UIRenderer.tsx   # maps A2UI JSON → React components
     │   ├── hooks/
-    │   │   └── useChat.ts         # manages API calls & SSE stream
+    │   │   └── useChat.ts         # manages API calls, SSE stream, A2UI types
     │   └── app/
-    │       └── page.tsx
+    │       ├── page.tsx
+    │       ├── layout.tsx
+    │       └── globals.css
     ├── package.json
     ├── next.config.mjs        # use .mjs — Next.js 14 does not support .ts config
     └── .env.local             # NEXT_PUBLIC_BACKEND_URL (git-ignored)
@@ -190,24 +198,114 @@ from google.adk.agents.loop_agent import LoopAgent
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
 from google.genai import types
+from google.adk.tools.mcp_tool import McpToolset
+from google.adk.tools.mcp_tool.mcp_session_manager import StdioConnectionParams, SseConnectionParams
+from mcp import StdioServerParameters
 ```
 
 ### `backend/agent/agent.py`
 
+The current implementation is **Rocky 🥊**, a Rock-Paper-Scissors agent wired to the RPS memory MCP server.
+
 ```python
-from .imports import LlmAgent
+import os
+from .imports import LlmAgent, McpToolset, StdioConnectionParams, StdioServerParameters
+
+_MCP_SERVER = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "mcp_servers", "rps_memory_server.py")
+)
 
 root_agent = LlmAgent(
     model="gemini-2.5-flash",
-    name="chatbot_agent",
-    description="Primary conversational agent.",
+    name="rocky_rps_agent",
+    description="Rocky — a competitive but friendly Rock-Paper-Scissors champion.",
     instruction="""
-    You are a helpful assistant. When your response includes structured UI
-    elements (lists, cards, buttons), return them as an A2UI JSON payload
-    under the key 'ui_components'. Otherwise respond in plain text.
-    """,
-    tools=[],   # add tools here
+You are Rocky 🥊, a competitive but friendly Rock-Paper-Scissors champion.
+Your ONLY job is to play Rock-Paper-Scissors with the user.
+
+ROUND FLOW:
+1. Call save_agent_choice(session_id, choice) immediately — pick randomly.
+2. Return A2UI JSON with sealed_box + rps_selector components.
+3. When user sends selected_rps_<choice>, call record_round(session_id, player_choice).
+4. Call get_stats and return a reveal message with result and score.
+
+Emoji map: 🪨 rock  📄 paper  ✂️ scissors
+Trash-talk on wins. Be gracious on losses. Demand rematches on draws.
+Use get_history / get_stats if user asks for past rounds or score.
+For plain chat, respond in plain text — NOT JSON.
+""",
+    tools=[
+        McpToolset(
+            connection_params=StdioConnectionParams(
+                server_params=StdioServerParameters(
+                    command="python3",
+                    args=[_MCP_SERVER],
+                ),
+            ),
+            tool_filter=["save_agent_choice", "record_round", "get_history", "get_stats"],
+        )
+    ],
 )
+```
+
+### `backend/mcp_servers/rps_memory_server.py`
+
+A **FastMCP** server that persists game state to per-session JSON files under `mcp_servers/data/`. Launched as a stdio subprocess by `McpToolset` — no extra terminal needed.
+
+```python
+from pathlib import Path
+from mcp.server.fastmcp import FastMCP
+
+DATA_DIR = Path(__file__).parent / "data"
+DATA_DIR.mkdir(exist_ok=True)
+
+BEATS = {"rock": "scissors", "scissors": "paper", "paper": "rock"}
+mcp = FastMCP("rps-memory")
+
+def _load(session_id):
+    path = DATA_DIR / f"{session_id}.json"
+    return json.loads(path.read_text()) if path.exists() else {"rounds": [], "pending_choice": None}
+
+def _save(session_id, data):
+    (DATA_DIR / f"{session_id}.json").write_text(json.dumps(data, indent=2))
+
+@mcp.tool()
+def save_agent_choice(session_id: str, choice: str) -> str:
+    """Lock in the agent's choice before the player picks."""
+    data = _load(session_id)
+    data["pending_choice"] = choice.lower()
+    _save(session_id, data)
+    return "Choice saved."
+
+@mcp.tool()
+def record_round(session_id: str, player_choice: str) -> dict:
+    """Evaluate the round and persist the result."""
+    data = _load(session_id)
+    agent = data["pending_choice"]
+    player = player_choice.lower()
+    result = "draw" if player == agent else ("player_wins" if BEATS[player] == agent else "agent_wins")
+    entry = {"round": len(data["rounds"]) + 1, "player_choice": player, "agent_choice": agent, "result": result}
+    data["rounds"].append(entry)
+    data["pending_choice"] = None
+    _save(session_id, data)
+    return entry
+
+@mcp.tool()
+def get_history(session_id: str) -> list:
+    """Return all past rounds for this session."""
+    return _load(session_id)["rounds"]
+
+@mcp.tool()
+def get_stats(session_id: str) -> dict:
+    """Return win/loss/draw counts."""
+    rounds = _load(session_id)["rounds"]
+    stats = {"player_wins": 0, "agent_wins": 0, "draws": 0, "total": len(rounds)}
+    for r in rounds:
+        stats[r["result"]] += 1
+    return stats
+
+if __name__ == "__main__":
+    mcp.run()
 ```
 
 ### `backend/main.py`
@@ -338,125 +436,56 @@ python-dotenv>=1.0.0
 
 ### `frontend/src/hooks/useChat.ts`
 
+Manages API calls, SSE streaming, session persistence, and A2UI types.
+
 ```typescript
-import { useState, useCallback } from "react";
+"use client";
+import { useState, useCallback, useRef } from "react";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:8080";
 
+export type A2UIComponent =
+  | { type: "text"; value: string }
+  | { type: "button"; label: string; action: string }
+  | { type: "card"; title: string; subtitle?: string; body: A2UIComponent[] }
+  | { type: "list"; items: string[] }
+  | { type: "rps_selector"; prompt?: string }     // RPS pick widget
+  | { type: "sealed_box"; label?: string };        // hidden agent choice indicator
+
 export type Message = {
+  id: string;
   role: "user" | "assistant";
   type: "text" | "a2ui";
-  content: string | object;
+  content: string | { components: A2UIComponent[] };
 };
 
-export function useChat(sessionId = "default") {
+export function useChat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
+  const sessionIdRef = useRef<string | null>(null);  // persists session across turns
 
-  const sendMessage = useCallback(async (text: string) => {
-    setMessages((prev) => [...prev, { role: "user", type: "text", content: text }]);
-    setLoading(true);
-
-    try {
-      const res = await fetch(`${BACKEND_URL}/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text, session_id: sessionId }),
-      });
-      const data = await res.json();
-
-      if (data.type === "a2ui") {
-        setMessages((prev) => [
-          ...prev,
-          { role: "assistant", type: "a2ui", content: data.payload },
-        ]);
-      } else {
-        setMessages((prev) => [
-          ...prev,
-          { role: "assistant", type: "text", content: data.text },
-        ]);
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, [sessionId]);
-
-  return { messages, loading, sendMessage };
+  // sendMessage    — POST /chat, single-turn
+  // sendMessageStream — GET /stream, SSE streaming
+  // A2UI button/widget actions call sendMessage(action) to re-enter the agent loop
 }
 ```
 
 ### `frontend/src/components/A2UIRenderer.tsx`
 
+Maps A2UI JSON component tree to React widgets. Add new `case` blocks here to register new component types.
+
 ```typescript
-// Maps A2UI JSON component tree to React widgets.
-// Extend this registry as new component types are needed.
+"use client";
+import type { A2UIComponent } from "@/hooks/useChat";
 
-import React from "react";
-
-type A2UIComponent =
-  | { type: "text"; value: string }
-  | { type: "button"; label: string; action: string }
-  | { type: "card"; title: string; subtitle?: string; body: A2UIComponent[] }
-  | { type: "list"; items: string[] };
-
-interface A2UIRendererProps {
-  payload: { components: A2UIComponent[] };
-  onAction?: (action: string) => void;
-}
-
-export function A2UIRenderer({ payload, onAction }: A2UIRendererProps) {
-  return (
-    <div className="a2ui-container">
-      {payload.components.map((comp, idx) => (
-        <ComponentNode key={idx} component={comp} onAction={onAction} />
-      ))}
-    </div>
-  );
-}
-
-function ComponentNode({
-  component,
-  onAction,
-}: {
-  component: A2UIComponent;
-  onAction?: (action: string) => void;
-}) {
-  switch (component.type) {
-    case "text":
-      return <p>{component.value}</p>;
-
-    case "button":
-      return (
-        <button onClick={() => onAction?.(component.action)}>
-          {component.label}
-        </button>
-      );
-
-    case "card":
-      return (
-        <div className="a2ui-card">
-          <h3>{component.title}</h3>
-          {component.subtitle && <p className="subtitle">{component.subtitle}</p>}
-          <div className="card-body">
-            {component.body.map((child, i) => (
-              <ComponentNode key={i} component={child} onAction={onAction} />
-            ))}
-          </div>
-        </div>
-      );
-
-    case "list":
-      return (
-        <ul>
-          {component.items.map((item, i) => (
-            <li key={i}>{item}</li>
-          ))}
-        </ul>
-      );
-
-    default:
-      return null;
-  }
+// Component registry — extend this switch as new A2UI types are added
+switch (component.type) {
+  case "text":       // plain paragraph
+  case "button":     // action button → fires onAction(action)
+  case "card":       // titled card with optional subtitle and nested body
+  case "list":       // unordered list of strings
+  case "rps_selector":  // 🪨📄✂️ pick buttons → fires onAction("selected_rps_<choice>")
+  case "sealed_box":    // 🔒 dashed box — agent's choice locked in, not revealed yet
 }
 ```
 
@@ -495,21 +524,45 @@ A2UI (Agent-to-UI) is an open protocol (Apache 2.0, by Google) where the agent r
 }
 ```
 
+### Registered Component Types
+
+| Type | Schema | Action fired | Notes |
+| :--- | :--- | :--- | :--- |
+| `text` | `{ "type": "text", "value": "..." }` | — | Plain paragraph |
+| `button` | `{ "type": "button", "label": "...", "action": "..." }` | `action` string | Generic CTA |
+| `card` | `{ "type": "card", "title": "...", "subtitle": "...", "body": [...] }` | — | Nested components in `body` |
+| `list` | `{ "type": "list", "items": ["...", ...] }` | — | Unordered list |
+| `rps_selector` | `{ "type": "rps_selector", "prompt": "..." }` | `selected_rps_rock` / `selected_rps_paper` / `selected_rps_scissors` | 🪨📄✂️ pick buttons |
+| `sealed_box` | `{ "type": "sealed_box", "label": "..." }` | — | 🔒 dashed box — agent's hidden choice |
+
 ### Instructing the Agent to Emit A2UI
 
 Add this section to the agent's `instruction` field:
 
 ```python
 instruction="""
-When returning structured data (lists, profiles, event cards, search results),
-format your response as a JSON object with a top-level 'components' array.
-Each element must have a 'type' field. Supported types:
-  - text   : { "type": "text", "value": "<string>" }
-  - button : { "type": "button", "label": "<string>", "action": "<string>" }
-  - card   : { "type": "card", "title": "<string>", "subtitle": "<string>", "body": [...] }
-  - list   : { "type": "list", "items": ["<string>", ...] }
-For plain conversational replies, respond in normal text (not JSON).
+When returning structured data or requesting user input, format your response
+as a JSON object with a top-level 'components' array. Supported types:
+  - text          : { "type": "text", "value": "<string>" }
+  - button        : { "type": "button", "label": "<string>", "action": "<string>" }
+  - card          : { "type": "card", "title": "<string>", "subtitle": "<string>", "body": [...] }
+  - list          : { "type": "list", "items": ["<string>", ...] }
+  - rps_selector  : { "type": "rps_selector", "prompt": "<string>" }
+  - sealed_box    : { "type": "sealed_box", "label": "<string>" }
+For plain conversational replies, respond in normal text — NOT JSON.
 """
+```
+
+### Code Fence Stripping
+
+The LLM often wraps JSON in markdown code fences (` ```json ... ``` `) even when instructed not to. `_parse_response` in `main.py` strips the fences before calling `json.loads`:
+
+```python
+if stripped.startswith("```"):
+    lines = stripped.splitlines()[1:]
+    if lines and lines[-1].strip() == "```":
+        lines = lines[:-1]
+    stripped = "\n".join(lines).strip()
 ```
 
 ---
