@@ -41,6 +41,12 @@
       "player_choice": "scissors",
       "agent_choice": "rock",
       "result": "agent_wins"
+    },
+    {
+      "round": 8,
+      "player_choice": "rock",
+      "agent_choice": "rock",
+      "result": "draw"
     }
   ],
   "pending_choice": null

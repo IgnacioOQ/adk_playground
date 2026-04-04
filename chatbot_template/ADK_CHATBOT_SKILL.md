@@ -167,6 +167,31 @@ Open: `http://localhost:3000`
 
 > **Important:** always run uvicorn from inside the `backend/` directory. Running it from the project root causes `Could not import module "main"`.
 
+### 7b. ADK Web — built-in observability UI
+
+For development, ADK ships a built-in web UI that lets you chat with the agent and inspect every turn in detail: model calls, tool invocations, latency per step, token counts, and the raw event stream.
+
+```bash
+cd my_chatbot/backend
+source .venv/bin/activate
+adk web .
+```
+
+Open: `http://localhost:8000`
+
+`adk web` reads the same `backend/.env` and spawns any MCP subprocesses just like the FastAPI server, so the full tool chain (including MCP servers) is exercised. It uses its own in-memory session service — sessions are isolated from the FastAPI `/chat` endpoint.
+
+| Panel | What you see |
+| :--- | :--- |
+| **Agent selector** | Lists every agent package found in the directory |
+| **Chat** | Send messages directly; responses include rendered A2UI if the agent emits it |
+| **Trace** | Per-turn breakdown: model latency, tool call names + args + results, token counts |
+| **Events** | Raw ADK event stream (useful for debugging streaming issues) |
+
+If port 8000 is already in use, pass `--port 8001`.
+
+`adk web` and `uvicorn main:app` can run simultaneously — they use different ports and independent session state.
+
 ### 8. Deploy to Google Cloud
 
 #### Backend → Cloud Run
