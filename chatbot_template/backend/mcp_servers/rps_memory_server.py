@@ -13,30 +13,25 @@ Tools exposed:
   get_stats(session_id)                  — win/loss/draw counts
 """
 
-import json
-from pathlib import Path
 from mcp.server.fastmcp import FastMCP
 
 # ---------------------------------------------------------------------------
-# Storage — one JSON file per session
+# Storage — in-memory dict per session (resets when the server process exits)
 # ---------------------------------------------------------------------------
-DATA_DIR = Path(__file__).parent / "data"
-DATA_DIR.mkdir(exist_ok=True)
+_STORE: dict[str, dict] = {}
 
 VALID_CHOICES = {"rock", "paper", "scissors"}
 BEATS = {"rock": "scissors", "scissors": "paper", "paper": "rock"}
 
 
 def _load(session_id: str) -> dict:
-    path = DATA_DIR / f"{session_id}.json"
-    if path.exists():
-        return json.loads(path.read_text())
-    return {"rounds": [], "pending_choice": None}
+    if session_id not in _STORE:
+        _STORE[session_id] = {"rounds": [], "pending_choice": None}
+    return _STORE[session_id]
 
 
 def _save(session_id: str, data: dict) -> None:
-    path = DATA_DIR / f"{session_id}.json"
-    path.write_text(json.dumps(data, indent=2))
+    _STORE[session_id] = data
 
 
 # ---------------------------------------------------------------------------

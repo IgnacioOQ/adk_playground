@@ -96,3 +96,9 @@ This repository is organized to separate conversational contexts and agent code:
   - Drag nodes (LlmAgent, SequentialAgent, ParallelAgent, LoopAgent, Tool, McpToolset) onto the canvas, connect them with edges, edit properties in the right panel, and click **Export Python** to download a working `agent.py`.
   - `ecosystem/src/utils/codeGenerator.ts`: Topological-sort-based Python ADK code generator.
   - `ecosystem/ADK_DESIGNER_SKILL.md`: Usage guide, node reference, and extension roadmap.
+- `chatbot_template/`: A **production-ready ADK chatbot template** with a decoupled frontend/backend architecture. The backend is a Python FastAPI service wrapping an ADK agent; the frontend is a Next.js (TypeScript) app. Agents can return plain text or structured A2UI JSON payloads that the frontend renders as rich interactive widgets.
+  - Run both services together: `./chatbot_template/dev.sh` → backend at `http://localhost:8080`, frontend at `http://localhost:3000`.
+  - `chatbot_template/backend/`: FastAPI server with `InMemorySessionService`, `/chat` (single-turn), `/stream` (SSE), and `/health` endpoints. Copy, rename, and drop in your `agent.py` to get started.
+  - `chatbot_template/frontend/`: Next.js app with `useChat` hook, `A2UIRenderer` component registry, and `ChatWindow` UI.
+  - `chatbot_template/ADK_CHATBOT_SKILL.md`: Step-by-step guide covering scaffolding, agent wiring, A2UI integration, and Cloud Run / Vertex AI / Firebase / Vercel deployment.
+  - `chatbot_template/A2UI_REF.md`: Full Agent-to-UI protocol reference — component schemas, renderer pattern, and extension guide.
