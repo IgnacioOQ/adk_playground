@@ -43,6 +43,16 @@ export function generatePythonCode(nodes: Node<NodeData>[], edges: Edge[], meta?
 
   const subAgentEdges = edges.filter((e) => e.data?.kind === 'sub_agent' || !e.data?.kind)
   const toolEdges = edges.filter((e) => e.data?.kind === 'tool')
+  const responseEdges = edges.filter((e) => e.data?.kind === 'response')
+
+  // Map: agentId → A2UIResponse node id
+  const agentA2UI: Record<string, string> = {}
+  for (const e of responseEdges) {
+    const target = nodes.find((n) => n.id === e.target)
+    if (target?.data.kind === 'A2UIResponse') {
+      agentA2UI[e.source] = e.target
+    }
+  }
 
   // Map: agentId → [toolId, ...]
   const agentTools: Record<string, string[]> = {}
@@ -61,6 +71,7 @@ export function generatePythonCode(nodes: Node<NodeData>[], edges: Edge[], meta?
   // Identify root: workflow agent with no incoming sub_agent edges
   const childIds = new Set(subAgentEdges.map((e) => e.target))
   const workflowKinds: AgentKind[] = ['SequentialAgent', 'ParallelAgent', 'LoopAgent', 'LlmAgent']
+  // A2UIResponse nodes are not agents — exclude from root computation
   const roots = nodes.filter(
     (n) => workflowKinds.includes(n.data.kind) && !childIds.has(n.id),
   )
@@ -179,7 +190,7 @@ export function generatePythonCode(nodes: Node<NodeData>[], edges: Edge[], meta?
     const node = nodeById[id]
     if (!node) continue
     const { kind } = node.data
-    if (kind === 'Tool' || kind === 'McpToolset' || kind === 'Script') continue
+    if (kind === 'Tool' || kind === 'McpToolset' || kind === 'Script' || kind === 'A2UIResponse') continue
 
     const isRoot = roots.length === 1 && roots[0].id === id
     const varName = isRoot ? 'root_agent' : pyVar(node.data.name)
@@ -189,6 +200,41 @@ export function generatePythonCode(nodes: Node<NodeData>[], edges: Edge[], meta?
       const toolsList = (agentTools[id] ?? [])
         .map((tid) => pyVar(nodeById[tid]?.data.name ?? tid))
         .join(', ')
+
+      // Build instruction — append A2UI block if connected to an A2UIResponse node
+      let instruction = d.instruction
+      const a2uiNodeId = agentA2UI[id]
+      if (a2uiNodeId) {
+        const a2uiNode = nodeById[a2uiNodeId]
+        if (a2uiNode?.data.kind === 'A2UIResponse') {
+          const components = a2uiNode.data.components
+            .split(',')
+            .map((c: string) => c.trim())
+            .filter(Boolean)
+          const componentLines = components.map((c: string) => {
+            const schemas: Record<string, string> = {
+              text:         '{ "type": "text", "value": "<string>" }',
+              button:       '{ "type": "button", "label": "<string>", "action": "<string>" }',
+              card:         '{ "type": "card", "title": "<string>", "subtitle": "<string>", "body": [...] }',
+              list:         '{ "type": "list", "items": ["<string>", ...] }',
+              rps_selector: '{ "type": "rps_selector", "prompt": "<string>" }',
+              sealed_box:   '{ "type": "sealed_box", "label": "<string>" }',
+            }
+            return `  ${c.padEnd(14)} → ${schemas[c] ?? `{ "type": "${c}" }`}`
+          })
+          const a2uiBlock = [
+            '',
+            'When your response contains structured data or requires user input, return a',
+            'JSON object with a top-level \'components\' array. Supported types:',
+            '',
+            ...componentLines,
+            '',
+            'For plain conversational replies, respond in normal text — NOT JSON.',
+          ].join('\n')
+          instruction = instruction + a2uiBlock
+        }
+      }
+
       lines.push(`${varName} = LlmAgent(`)
       lines.push(`    model='${d.model}',`)
       lines.push(`    name='${d.name}',`)
@@ -196,7 +242,7 @@ export function generatePythonCode(nodes: Node<NodeData>[], edges: Edge[], meta?
       if (d.output_key) lines.push(`    output_key='${d.output_key}',`)
       if (toolsList) lines.push(`    tools=[${toolsList}],`)
       lines.push(`    instruction=(`)
-      for (const instrLine of d.instruction.split('\n')) {
+      for (const instrLine of instruction.split('\n')) {
         lines.push(`        '${instrLine.replace(/'/g, "\\'")}'`)
       }
       lines.push(`    ),`)

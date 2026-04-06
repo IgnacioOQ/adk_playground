@@ -10,6 +10,7 @@ export type AgentKind =
   | 'Context'
   | 'Human'
   | 'Evaluator'
+  | 'A2UIResponse'
 
 export type EdgeKind = 'sub_agent' | 'delegate' | 'tool' | 'response'
 
@@ -96,6 +97,19 @@ export interface ContextData extends Record<string, unknown> {
   content: string
 }
 
+export type A2UIComponentType = 'text' | 'button' | 'card' | 'list' | 'rps_selector' | 'sealed_box'
+
+export const A2UI_ALL_COMPONENTS: A2UIComponentType[] = ['text', 'button', 'card', 'list', 'rps_selector', 'sealed_box']
+
+export interface A2UIResponseData extends Record<string, unknown> {
+  kind: 'A2UIResponse'
+  name: string
+  /** Comma-separated list of enabled component types */
+  components: string
+  /** Target renderer, e.g. "React / A2UIRenderer" */
+  renderer: string
+}
+
 export interface ScriptData extends Record<string, unknown> {
   kind: 'Script'
   name: string
@@ -118,6 +132,7 @@ export type NodeData =
   | ContextData
   | HumanData
   | EvaluatorData
+  | A2UIResponseData
 
 // ─── Palette entry (what shows up in the left sidebar) ───────────────────────
 
@@ -207,6 +222,13 @@ export const PALETTE_ITEMS: PaletteItem[] = [
     color: '#10b981',
     icon: '✅',
   },
+  {
+    kind: 'A2UIResponse',
+    label: 'A2UI Response',
+    description: 'Agent-to-UI structured JSON output contract',
+    color: '#ec4899',
+    icon: '🎨',
+  },
 ]
 
 // ─── Default data for each kind ──────────────────────────────────────────────
@@ -280,6 +302,13 @@ export function defaultData(kind: AgentKind): NodeData {
         model: 'gemini-2.5-flash',
         success_condition: 'The output fully and correctly addresses the original request.',
       }
+    case 'A2UIResponse':
+      return {
+        kind,
+        name: 'a2ui_response',
+        components: 'text, button, card, list',
+        renderer: 'React / A2UIRenderer',
+      }
   }
 }
 
@@ -307,6 +336,10 @@ const TOOL_KINDS: AgentKind[] = ['Tool', 'McpToolset']
 const WORKFLOW_KINDS: AgentKind[] = ['SequentialAgent', 'ParallelAgent', 'LoopAgent']
 
 export function edgeStyle(sourceKind?: AgentKind, targetKind?: AgentKind): EdgeStyle {
+  if (targetKind === 'A2UIResponse') {
+    // Any → A2UIResponse: pink dashed
+    return { color: '#ec4899', dashed: true, animated: false, kind: 'response' }
+  }
   if (targetKind && TOOL_KINDS.includes(targetKind)) {
     // Any → Tool/MCP: teal dashed
     return { color: '#14b8a6', dashed: true, animated: false, kind: 'tool' }

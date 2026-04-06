@@ -3,7 +3,7 @@
 - type: how-to
 - id: ecosystem.designer.skill
 - description: Visual ADK multi-agent pipeline designer built with React Flow: drag-and-drop node canvas, edge types, property panel, and Python agent.py export.
-- last_checked: 2026-03-26
+- last_checked: 2026-04-06
 - label: [skill, frontend]
 <!-- content -->
 The `ecosystem/` project is a **visual multi-agent architecture designer** built with React + React Flow. It lets you design ADK multi-agent pipelines by dragging and connecting nodes on a canvas, then exporting a working `agent.py` file.
@@ -71,6 +71,7 @@ Edges always carry information in the direction of the arrow. Color indicates th
 | Indigo | Solid, animated | Workflow agent → sub-agent (orchestration + data) |
 | Orange | Solid | LLM agent → delegated agent |
 | Teal | Dashed | Any agent → tool (function call) |
+| Pink | Dashed | LLM agent → A2UI Response (output contract) |
 | Gray | Plain, no particles | Any node → Information Set (Database or Context) |
 
 ## Node Types
@@ -87,6 +88,15 @@ These nodes participate in information flow and connect with animated particle e
 | ✅ Evaluator | Workflow Agents | Emerald | `LlmAgent` + `exit_loop` | Checks output against a success condition; exits loop when satisfied. Always place last inside a Loop. |
 | 🔧 Tool | Tools | Gray | Python function | Custom callable tool for an LlmAgent |
 | 🔌 MCP Toolset | Tools | Teal | `McpToolset` | Connects an external MCP server to an LlmAgent |
+
+### Output contract nodes
+These nodes sit at the **output boundary** of the pipeline and define the response format expected by the frontend. They do not generate Python agent code themselves; instead they modify the instruction of the connected LLM agent.
+
+| Node | Palette group | Color | Purpose |
+| :--- | :--- | :--- | :--- |
+| 🎨 A2UI Response | Output Contracts | Pink | Declares that a connected LLM Agent returns structured A2UI JSON. Configures which component types are enabled and which renderer will consume them. |
+
+Connect an `A2UIResponse` node from an `LlmAgent` using a **response edge** (pink dashed). The code generator will automatically append the correct A2UI instruction block to that agent's `instruction`, listing only the component types enabled on the node.
 
 ### Information Set nodes
 These nodes represent passive data sources. Their edges carry no flow particles and they do not trigger stuck-node warnings. They are of a fundamentally different nature from active flow nodes.
@@ -105,6 +115,7 @@ The left sidebar organises nodes into collapsible groups. Click a group header t
 | (standalone) | LLM Agent, Human / User |
 | 🔀 Workflow Agents | Sequential, Parallel, Loop, Evaluator |
 | 🧰 Tools | Tool, MCP Toolset |
+| 🎨 Output Contracts | A2UI Response |
 | 🗂️ Information Sets | Database, Context |
 
 ### Building a pipeline
@@ -118,6 +129,7 @@ The left sidebar organises nodes into collapsible groups. Click a group header t
 - **Sub-agent edge** (indigo, animated + particles): workflow agent → child agents.
 - **Delegate edge** (orange, particles): LLM agent → another agent.
 - **Tool edge** (teal dashed, particles): any agent → Tool or MCP Toolset.
+- **Response edge** (pink dashed): LLM agent → A2UI Response (output contract).
 - **Information edge** (gray, no particles): any agent → Database or Context.
 
 Every active flow connection also produces a **return edge** — a separate dashed arrow running in the opposite direction via the `bottom` handle on both nodes, representing the response or result flowing back. Both directions carry animated particles at the same speed and brightness.
@@ -165,6 +177,7 @@ Click **Export Python** in the toolbar — the browser downloads an `agent.py` f
 4. Emits agent instantiations in dependency order.
 5. Assigns `root_agent` to the top-level workflow agent.
 6. Generates only the imports needed for the node types used.
+7. For any `LlmAgent` with a **response** edge to an `A2UIResponse` node, appends the A2UI instruction block (listing only the enabled component types) to that agent's `instruction` field automatically.
 
 ## File Structure
 ```
@@ -194,7 +207,8 @@ ecosystem/
     │   ├── HumanNode.tsx
     │   ├── EvaluatorNode.tsx
     │   ├── DatabaseNode.tsx
-    │   └── ContextNode.tsx
+    │   ├── ContextNode.tsx
+    │   └── A2UIResponseNode.tsx       ← Output contract: A2UI component registry + renderer
     ├── components/
     │   ├── NodePalette.tsx / .css     ← Left drag-and-drop sidebar (collapsible groups)
     │   ├── PropertyPanel.tsx / .css   ← Right property editor
@@ -208,6 +222,8 @@ ecosystem/
 | :--- | :--- |
 | **New active node type** | Add to `AgentKind` in `types/agent.ts`, create a component in `nodes/`, add to `PALETTE_ITEMS`, handle in `codeGenerator.ts` |
 | **New information node type** | Same as above, plus add the kind to `INFO_KINDS` in `App.tsx` so its edges skip particles |
+| **New output contract node type** | Same as above, plus add the kind to `TERMINAL_KINDS` in `App.tsx` so it doesn't trigger stuck-node warnings |
+| **New A2UI component type** | Add to `A2UI_ALL_COMPONENTS` in `types/agent.ts`; add its schema string in `codeGenerator.ts` → `schemas` map |
 | **New model option** | Add to the `<select>` in `PropertyPanel.tsx` |
 | **Edge latency / speed** | Set `data.speed` (seconds) on an edge — `FlowEdge.tsx` reads it to control particle travel time |
 | **Persist to file** | Use **Export Preset** — saves full layout as a `.json` preset file |

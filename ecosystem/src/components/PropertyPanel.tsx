@@ -1,6 +1,7 @@
 import type { Node, Edge } from '@xyflow/react'
 import type { NodeData } from '../types/agent'
-import { kindColor, kindIcon } from '../types/agent'
+import { kindColor, kindIcon, A2UI_ALL_COMPONENTS } from '../types/agent'
+import type { A2UIComponentType } from '../types/agent'
 import './PropertyPanel.css'
 
 interface PropertyPanelProps {
@@ -281,6 +282,60 @@ export default function PropertyPanel({ node, edge, onChange, onDelete, onEdgeCh
                 placeholder="Connection string or resource ID"
               />
             </Field>
+          </>
+        )}
+
+        {/* ── A2UIResponse ── */}
+        {data.kind === 'A2UIResponse' && (
+          <>
+            <Field label="Renderer">
+              <input
+                value={data.renderer}
+                onChange={(e) => update({ renderer: e.target.value } as Partial<NodeData>)}
+                placeholder="e.g. React / A2UIRenderer"
+              />
+            </Field>
+            <Field label="Components">
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, paddingTop: 2 }}>
+                {A2UI_ALL_COMPONENTS.map((c: A2UIComponentType) => {
+                  const enabled = data.components.split(',').map((x) => x.trim()).includes(c)
+                  return (
+                    <button
+                      key={c}
+                      onClick={() => {
+                        const current = data.components.split(',').map((x) => x.trim()).filter(Boolean)
+                        const next = enabled
+                          ? current.filter((x) => x !== c)
+                          : [...current, c]
+                        update({ components: next.join(', ') } as Partial<NodeData>)
+                      }}
+                      style={{
+                        fontSize: 11,
+                        padding: '2px 8px',
+                        borderRadius: 9999,
+                        cursor: 'pointer',
+                        background: enabled ? '#ec489920' : 'transparent',
+                        border: `1px solid ${enabled ? '#ec4899' : '#334155'}`,
+                        color: enabled ? '#ec4899' : '#64748b',
+                        fontFamily: 'monospace',
+                      }}
+                    >
+                      {c}
+                    </button>
+                  )
+                })}
+              </div>
+              <input
+                style={{ marginTop: 6 }}
+                value={data.components}
+                onChange={(e) => update({ components: e.target.value } as Partial<NodeData>)}
+                placeholder="or type comma-separated list"
+              />
+            </Field>
+            <p style={{ fontSize: 11, color: '#475569', lineHeight: 1.5, marginTop: 4 }}>
+              Connect this node from an LLM Agent with a <strong>response</strong> edge. The code
+              generator will inject the A2UI instruction block into that agent automatically.
+            </p>
           </>
         )}
 
