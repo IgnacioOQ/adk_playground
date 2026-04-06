@@ -16,6 +16,9 @@ const TOOL_COLOR = '#6b7280'
 const INFO_KINDS: AgentKind[] = ['Database', 'Context']
 const INFO_COLOR = '#8b5cf6'
 
+const OUTPUT_KINDS: AgentKind[] = ['A2UIResponse']
+const OUTPUT_COLOR = '#ec4899'
+
 function paletteItem(kind: AgentKind) {
   return PALETTE_ITEMS.find((p) => p.kind === kind)!
 }
@@ -23,11 +26,12 @@ function paletteItem(kind: AgentKind) {
 export default function NodePalette({ onDragStart }: NodePaletteProps) {
   const [workflowOpen, setWorkflowOpen] = useState(false)
   const [toolsOpen, setToolsOpen] = useState(false)
-
+  const [outputOpen, setOutputOpen] = useState(false)
   const [infoOpen, setInfoOpen] = useState(false)
 
   const workflowItems = WORKFLOW_KINDS.map(paletteItem)
   const toolItems = TOOL_KINDS.map(paletteItem)
+  const outputItems = OUTPUT_KINDS.map(paletteItem)
   const infoItems = INFO_KINDS.map(paletteItem)
 
   const standaloneKinds: AgentKind[] = ['LlmAgent', 'Human']
@@ -127,6 +131,42 @@ export default function NodePalette({ onDragStart }: NodePaletteProps) {
         )}
       </div>
 
+      {/* Output Contracts group */}
+      <div className="palette-group">
+        <button
+          className="palette-group-header"
+          style={{ borderLeftColor: OUTPUT_COLOR }}
+          onClick={() => setOutputOpen((o) => !o)}
+        >
+          <span className="palette-icon">🎨</span>
+          <div className="palette-text">
+            <div className="palette-label">Output Contracts</div>
+            <div className="palette-desc">A2UI Response</div>
+          </div>
+          <span className="palette-group-chevron" style={{ transform: outputOpen ? 'rotate(90deg)' : 'rotate(0deg)' }}>›</span>
+        </button>
+        {outputOpen && (
+          <div className="palette-group-children">
+            {outputItems.map((item) => (
+              <div
+                key={item.kind}
+                className="palette-item palette-item-child"
+                draggable
+                onDragStart={(e) => onDragStart(item.kind, e)}
+                style={{ borderLeftColor: item.color }}
+                title={item.description}
+              >
+                <span className="palette-icon">{item.icon}</span>
+                <div className="palette-text">
+                  <div className="palette-label">{item.label}</div>
+                  <div className="palette-desc">{item.description}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* Information Sets group */}
       <div className="palette-group">
         <button
@@ -200,6 +240,10 @@ export default function NodePalette({ onDragStart }: NodePaletteProps) {
         <div className="edge-legend-item">
           <span className="edge-line edge-line-dashed" style={{ backgroundImage: 'repeating-linear-gradient(90deg,#14b8a6 0,#14b8a6 4px,transparent 4px,transparent 8px)' }} />
           <span>any → tool</span>
+        </div>
+        <div className="edge-legend-item">
+          <span className="edge-line edge-line-dashed" style={{ backgroundImage: 'repeating-linear-gradient(90deg,#ec4899 0,#ec4899 4px,transparent 4px,transparent 8px)' }} />
+          <span>LLM → A2UI response</span>
         </div>
       </div>
     </aside>
