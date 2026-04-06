@@ -1,0 +1,202 @@
+{
+  "_meta": {
+    "name": "Chatbot Template — Chatty RPS",
+    "description": "ADK chatbot template: FastAPI + Next.js with Chatty, a mischievous RPS LlmAgent backed by an in-process stdio MCP memory server and A2UI rich output.",
+    "source_repo": "adk_playground/chatbot_template",
+    "created": "2026-04-06"
+  },
+  "nodes": [
+    {
+      "id": "human",
+      "type": "Human",
+      "position": { "x": 50, "y": 300 },
+      "width": 160,
+      "height": 80,
+      "data": {
+        "kind": "Human",
+        "name": "User",
+        "description": "Chat UI at localhost:3000 (Next.js). Sends POST /chat or GET /stream to FastAPI backend at localhost:8080.",
+        "prompt": "Type a message to play Rock-Paper-Scissors with Chatty 🧚"
+      }
+    },
+    {
+      "id": "chatty",
+      "type": "LlmAgent",
+      "position": { "x": 320, "y": 270 },
+      "width": 230,
+      "height": 130,
+      "data": {
+        "kind": "LlmAgent",
+        "name": "chatty_agent",
+        "model": "gemini-2.5-flash",
+        "description": "Chatty 🧚 — a mischievous trickster spirit who plays Rock-Paper-Scissors with theatrical flair.",
+        "instruction": "Chatty personality — Puck-like trickster. Game loop: seal pick via save_agent_choice → return sealed_box + rps_selector A2UI → on player pick call record_round then get_stats → reveal result. Also handles history/stats commands. Plain text for off-topic replies.",
+        "output_key": "response"
+      }
+    },
+    {
+      "id": "rps_tools",
+      "type": "McpToolset",
+      "position": { "x": 660, "y": 150 },
+      "width": 240,
+      "height": 160,
+      "data": {
+        "kind": "McpToolset",
+        "name": "rps_memory_server",
+        "command": "python3",
+        "args": "mcp_servers/rps_memory_server.py",
+        "tool_filter": "save_agent_choice, record_round, get_history, get_stats"
+      }
+    },
+    {
+      "id": "a2ui_output",
+      "type": "A2UIResponse",
+      "position": { "x": 660, "y": 390 },
+      "width": 240,
+      "height": 120,
+      "data": {
+        "kind": "A2UIResponse",
+        "name": "A2UI Output",
+        "description": "Structured JSON payload consumed by A2UIRenderer in the Next.js frontend. Components: sealed box (hides agent pick), RPS selector (player pick), and text (reveal + score).",
+        "components": "text, sealed_box, rps_selector",
+        "renderer": "React / A2UIRenderer"
+      }
+    },
+    {
+      "id": "chatty_personality",
+      "type": "Context",
+      "position": { "x": 980, "y": 100 },
+      "width": 230,
+      "height": 110,
+      "data": {
+        "kind": "Context",
+        "name": "Chatty Personality",
+        "description": "Static personality and RPS game rules injected into chatty_agent instruction at startup.",
+        "content": "Chatty 🧚 is Puck-like — archaic impish voice, rhymes and quips. RPS game loop defined in instruction. Emoji map: 🪨 rock, 📄 paper, ✂️ scissors. Gloat on win, theatrical dismay on loss, declare fairy magic on draw."
+      }
+    },
+    {
+      "id": "session_state",
+      "type": "SessionState",
+      "position": { "x": 980, "y": 330 },
+      "width": 230,
+      "height": 110,
+      "data": {
+        "kind": "SessionState",
+        "name": "Session State",
+        "description": "InMemorySessionService — one session per user, session_id threaded through FastAPI /chat and /stream, persisted client-side across turns.",
+        "keys": "session_id",
+        "schema": "session_id (str) — auto-generated UUID if not provided, returned in every /chat response and first /stream SSE event"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-human-chatty",
+      "source": "human",
+      "target": "chatty",
+      "sourceHandle": "right",
+      "targetHandle": "left",
+      "type": "flow",
+      "data": {
+        "kind": "delegate",
+        "isObservation": false,
+        "name": "",
+        "description": "User message via POST /chat (single-turn) or GET /stream (SSE streaming)"
+      },
+      "style": { "stroke": "#f97316" },
+      "markerEnd": { "type": "arrowclosed", "color": "#f97316" }
+    },
+    {
+      "id": "e-ret-chatty-human",
+      "source": "chatty",
+      "target": "human",
+      "sourceHandle": "bottom",
+      "targetHandle": "bottom",
+      "type": "flow",
+      "data": {
+        "kind": "response",
+        "isObservation": false,
+        "isReturn": true,
+        "name": "",
+        "description": "JSON response: {type: text | a2ui, ...} — plain text or structured A2UI payload"
+      },
+      "style": { "stroke": "#f97316", "strokeDasharray": "4,3", "opacity": 0.55 },
+      "markerEnd": { "type": "arrowclosed", "color": "#f97316" }
+    },
+    {
+      "id": "e-chatty-rps_tools",
+      "source": "chatty",
+      "target": "rps_tools",
+      "sourceHandle": "right",
+      "targetHandle": "left",
+      "type": "flow",
+      "data": {
+        "kind": "tool",
+        "isObservation": false,
+        "name": "",
+        "description": "MCP tool calls dispatched by agent: save_agent_choice, record_round, get_history, get_stats"
+      },
+      "style": { "stroke": "#14b8a6", "strokeDasharray": "6,4" },
+      "markerEnd": { "type": "arrowclosed", "color": "#14b8a6" }
+    },
+    {
+      "id": "e-ret-rps_tools-chatty",
+      "source": "rps_tools",
+      "target": "chatty",
+      "sourceHandle": "bottom",
+      "targetHandle": "bottom",
+      "type": "flow",
+      "data": {
+        "kind": "response",
+        "isObservation": false,
+        "isReturn": true,
+        "name": "",
+        "description": "Tool results returned to agent (round outcome, stats, history list)"
+      },
+      "style": { "stroke": "#14b8a6", "strokeDasharray": "4,3", "opacity": 0.55 },
+      "markerEnd": { "type": "arrowclosed", "color": "#14b8a6" }
+    },
+    {
+      "id": "e-chatty-a2ui_output",
+      "source": "chatty",
+      "target": "a2ui_output",
+      "sourceHandle": "right",
+      "targetHandle": "left",
+      "data": {
+        "kind": "response",
+        "isObservation": false,
+        "name": "",
+        "description": "A2UI JSON payload emitted by agent: {components: [...]} consumed by A2UIRenderer"
+      },
+      "style": { "stroke": "#ec4899", "strokeDasharray": "6,4" },
+      "markerEnd": { "type": "arrowclosed", "color": "#ec4899" }
+    },
+    {
+      "id": "e-chatty-personality",
+      "source": "chatty",
+      "target": "chatty_personality",
+      "data": {
+        "kind": "context",
+        "isObservation": true,
+        "name": "",
+        "description": "Personality and game rules injected into agent instruction at agent definition time"
+      },
+      "style": { "stroke": "#94a3b8" },
+      "markerEnd": { "type": "arrowclosed", "color": "#94a3b8" }
+    },
+    {
+      "id": "e-chatty-session_state",
+      "source": "chatty",
+      "target": "session_state",
+      "data": {
+        "kind": "context",
+        "isObservation": true,
+        "name": "",
+        "description": "session_id scoped via InMemorySessionService; also passed as tool arg to MCP server"
+      },
+      "style": { "stroke": "#94a3b8" },
+      "markerEnd": { "type": "arrowclosed", "color": "#94a3b8" }
+    }
+  ]
+}
