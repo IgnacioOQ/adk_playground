@@ -23,10 +23,8 @@ env:
   # use this to call the IAM-only Cloud Run backend with an OIDC ID token
   # minted via the metadata server.
   #
-  # Placeholder until Phase 3 deploys the backend and we know its URL.
-  # Phase 4 will replace this with the real Cloud Run URL via:
-  #   firebase apphosting:secrets:set BACKEND_URL  (or direct edit + git push)
+  # Cloud Run backend URL (set during Phase 4 of onboarding).
   - variable: BACKEND_URL
-    value: https://chatbot-template-app-backend-PLACEHOLDER.us-central1.run.app
+    value: https://chatbot-template-app-backend-207274917577.us-central1.run.app
     availability:
       - RUNTIME
