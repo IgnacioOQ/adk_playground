@@ -7,7 +7,7 @@
 # the `chatbot-template` branch on GitHub and auto-deploys on push.
 #
 # Usage:
-#   ./deploy.sh                # uses defaults below
+#   ./deploy-backend.sh        # uses defaults below
 #   PROJECT_ID=foo ./deploy.sh # override project
 #
 # Branch guard: refuses to run from any branch other than `chatbot-template`.
@@ -18,7 +18,7 @@
 set -euo pipefail
 
 # ---- Configuration ----------------------------------------------------------
-PROJECT_ID="${PROJECT_ID:-chatbot-template}"
+PROJECT_ID="${PROJECT_ID:-chatbot-template-eikasia}"
 REGION="${REGION:-us-central1}"
 AR_REPO="${AR_REPO:-chatbot-template-app}"
 SERVICE="${SERVICE:-chatbot-template-app-backend}"

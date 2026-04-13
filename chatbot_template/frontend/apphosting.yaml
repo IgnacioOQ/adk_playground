@@ -10,9 +10,9 @@ runConfig:
   # this keeps cost effectively at zero.
   minInstances: 0
   maxInstances: 2
-  # The Next.js SSR server is lightweight; 512 MiB is plenty for the proxy
+  # The Next.js SSR server is lightweight; 256 MiB is plenty for the proxy
   # routes and React rendering at this scale.
-  memoryMiB: 512
+  memoryMiB: 256
   cpu: 1
   concurrency: 80
   # Cloud Run default request timeout is fine; SSE streams from /api/stream

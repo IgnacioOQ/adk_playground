@@ -28,7 +28,7 @@ For full infrastructure details see `knowledge_base/content/reference/INFRASTRUC
 
 ## Production branch
 
-Production deploys are sourced **exclusively** from the **`chatbot-template`** branch of `IgnacioOQ/adk_playground`:
+Production deploys are sourced **exclusively** from the **`chatbot-template`** branch of `eikasia-llc/adk_playground`:
 
 - Frontend: Firebase App Hosting auto-deploys on every push to `chatbot-template` (root: `chatbot_template/frontend/`).
 - Backend: `./deploy.sh` refuses to run from any other branch.
