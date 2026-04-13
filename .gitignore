@@ -18,6 +18,10 @@ __pycache__/
 agents_log/
 logs/
 
+# macOS
+.DS_Store
+**/.DS_Store
+
 # IDEs
 .idea/
 .vscode/
