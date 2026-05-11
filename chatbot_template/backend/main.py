@@ -16,8 +16,9 @@ from google.genai import types
 
 
 # Stage-level latency instrumentation — see content/how-to/LLM_LATENCY_SKILL.md.
-# Emitted to stdout so Cloud Run / Cloud Logging captures them. Grep with
-# `gcloud run services logs read ... | grep '\[LATENCY\]'`.
+# Emits structured JSON with severity=NOTICE so Cloud Run parses it as a log
+# entry above the project's "drop below NOTICE" cost-policy exclusion (see
+# INFRASTRUCTURE_DEFINITIONS_REF.md). Locally the JSON line is still readable.
 @contextmanager
 def log_latency(stage: str):
     start = time.perf_counter()
@@ -25,7 +26,13 @@ def log_latency(stage: str):
         yield
     finally:
         elapsed_ms = (time.perf_counter() - start) * 1000
-        print(f"[LATENCY] {stage}: {elapsed_ms:.1f}ms", flush=True)
+        print(
+            json.dumps({
+                "severity": "NOTICE",
+                "message": f"[LATENCY] {stage}: {elapsed_ms:.1f}ms",
+            }),
+            flush=True,
+        )
 
 load_dotenv()
 
