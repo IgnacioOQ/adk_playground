@@ -63,11 +63,11 @@ BACKEND_URL=http://localhost:8080
 ### Backend (Cloud Run)
 ```bash
 git checkout chatbot-template
-./deploy.sh
+./deploy-backend.sh
 ```
 or via Cloud Build:
 ```bash
-gcloud builds submit --config cloudbuild.yaml --project=chatbot-template .
+gcloud builds submit --config cloudbuild.yaml --project=chatbot-template-eikasia .
 ```
 
 ### Frontend (Firebase App Hosting)

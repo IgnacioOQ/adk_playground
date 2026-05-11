@@ -26,6 +26,10 @@ logs/
 .idea/
 .vscode/
 
+# Claude Code — local overrides and editor backups
+.claude/settings.local.json
+.claude/*.json-e
+
 # Databases
 session.db
 

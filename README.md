@@ -4,7 +4,7 @@
 - label: [core, template]
 - injection: informational
 - volatility: evolving
-- last_checked: 2026-03-17
+- last_checked: 2026-05-11
 <!-- content -->
 
 ## What is Google ADK?
@@ -98,6 +98,11 @@ This repository is organized to separate conversational contexts and agent code:
   - `ecosystem/ADK_DESIGNER_SKILL.md`: Usage guide, node reference, and extension roadmap.
 - `chatbot_template/`: A **production-ready ADK chatbot template** with a decoupled frontend/backend architecture. The backend is a Python FastAPI service wrapping an ADK agent; the frontend is a Next.js (TypeScript) app. Agents can return plain text or structured A2UI JSON payloads that the frontend renders as rich interactive widgets.
   - Run both services together: `./chatbot_template/dev.sh` → backend at `http://localhost:8080`, frontend at `http://localhost:3000`.
+  - **Production deployment.** The frontend runs on **Firebase App Hosting** (Next.js SSR on a managed Cloud Run service, fronted by Cloud CDN); the backend runs as a separate IAM-only **Cloud Run** service. The browser never calls the backend directly — Next.js server-side proxy routes mint an OIDC ID token via the GCP metadata server and call the backend on the user's behalf. `GOOGLE_API_KEY` is mounted from Secret Manager into the backend.
+  - **Deploy flow.** All production deploys are sourced from the `chatbot-template` branch (NOT `main`):
+    - *Frontend:* push to `chatbot-template` → Firebase App Hosting auto-deploys.
+    - *Backend:* `git checkout chatbot-template && ./chatbot_template/deploy-backend.sh` (the script refuses any other branch); it builds via Cloud Build and rolls out a new Cloud Run revision.
+    - Wiring lives in `chatbot_template/firebase.json` (App Hosting backend declaration) and `chatbot_template/frontend/apphosting.yaml` (runtime config + `BACKEND_URL`). Detailed runbook in `chatbot_template/README.md`.
   - `chatbot_template/backend/`: FastAPI server with `InMemorySessionService`, `/chat` (single-turn), `/stream` (SSE), and `/health` endpoints. Copy, rename, and drop in your `agent.py` to get started.
   - `chatbot_template/frontend/`: Next.js app with `useChat` hook, `A2UIRenderer` component registry, and `ChatWindow` UI.
   - `chatbot_template/ADK_CHATBOT_SKILL.md`: Step-by-step guide covering scaffolding, agent wiring, A2UI integration, and Cloud Run / Vertex AI / Firebase / Vercel deployment.
