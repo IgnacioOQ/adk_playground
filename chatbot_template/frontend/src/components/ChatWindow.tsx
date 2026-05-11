@@ -45,7 +45,7 @@ export default function ChatWindow() {
           alignItems: "center",
         }}
       >
-        <strong>Template Chatbot</strong>
+        <strong>Template Chatbot - Testing</strong>
         <label style={{ fontSize: "0.85rem", cursor: "pointer" }}>
           <input
             type="checkbox"

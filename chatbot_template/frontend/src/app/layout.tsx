@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Template Chatbot",
+  title: "Template Chatbot - Testing",
   description: "ADK-powered chatbot with decoupled FastAPI backend",
 };
 
