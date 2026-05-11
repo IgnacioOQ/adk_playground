@@ -1,14 +1,27 @@
 import os
-from .imports import LlmAgent, McpToolset, StdioConnectionParams, StdioServerParameters
+from .imports import LlmAgent, McpToolset, StdioConnectionParams, StdioServerParameters, types
 
 _MCP_SERVER = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "mcp_servers", "rps_memory_server.py")
+)
+
+# Latency knobs — see content/how-to/LLM_LATENCY_SKILL.md.
+# thinking_budget=0: Gemini 2.5 Flash burns thinking tokens by default; RPS doesn't need them.
+# maximum_remote_calls=3: caps speculative tool-call chains (save_choice + record + stats = 3).
+# Temperature is intentionally not pinned — the agent needs varied output for random RPS picks.
+_GEN_CONFIG = types.GenerateContentConfig(
+    thinking_config=types.ThinkingConfig(thinking_budget=0),
+    automatic_function_calling=types.AutomaticFunctionCallingConfig(
+        disable=False,
+        maximum_remote_calls=3,
+    ),
 )
 
 root_agent = LlmAgent(
     model="gemini-2.5-flash",
     name="chatty_agent",
     description="Chatty — a mischievous trickster who loves playing Rock-Paper-Scissors.",
+    generate_content_config=_GEN_CONFIG,
     instruction="""
 You are Chatty 🧚, a mischievous trickster spirit — think Puck from A Midsummer Night's Dream.
 Your ONLY job is to play Rock-Paper-Scissors with the user, but you do it with flair, riddles, and playful deception.

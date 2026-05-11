@@ -1,7 +1,8 @@
 import os
 import json
+import time
 import uuid
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, contextmanager
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -12,6 +13,19 @@ from dotenv import load_dotenv
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
 from google.genai import types
+
+
+# Stage-level latency instrumentation — see content/how-to/LLM_LATENCY_SKILL.md.
+# Emitted to stdout so Cloud Run / Cloud Logging captures them. Grep with
+# `gcloud run services logs read ... | grep '\[LATENCY\]'`.
+@contextmanager
+def log_latency(stage: str):
+    start = time.perf_counter()
+    try:
+        yield
+    finally:
+        elapsed_ms = (time.perf_counter() - start) * 1000
+        print(f"[LATENCY] {stage}: {elapsed_ms:.1f}ms", flush=True)
 
 load_dotenv()
 
@@ -117,22 +131,27 @@ async def chat(body: ChatRequest):
         raise HTTPException(status_code=400, detail="message must not be empty")
 
     session_id = body.session_id or str(uuid.uuid4())
-    await _ensure_session(session_id)
 
-    runner = _make_runner(session_id)
+    with log_latency("ensure_session"):
+        await _ensure_session(session_id)
+
+    with log_latency("make_runner"):
+        runner = _make_runner(session_id)
+
     content = types.Content(
         role="user",
         parts=[types.Part(text=body.message)],
     )
 
     response_text = ""
-    async for event in runner.run_async(
-        user_id=session_id,
-        session_id=session_id,
-        new_message=content,
-    ):
-        if event.is_final_response() and event.content and event.content.parts:
-            response_text = event.content.parts[0].text or ""
+    with log_latency("chat:runner_run"):
+        async for event in runner.run_async(
+            user_id=session_id,
+            session_id=session_id,
+            new_message=content,
+        ):
+            if event.is_final_response() and event.content and event.content.parts:
+                response_text = event.content.parts[0].text or ""
 
     return JSONResponse(
         content={"session_id": session_id, **_parse_response(response_text)}
@@ -152,17 +171,25 @@ async def stream(
         raise HTTPException(status_code=400, detail="message must not be empty")
 
     session_id = session_id or str(uuid.uuid4())
-    await _ensure_session(session_id)
 
-    runner = _make_runner(session_id)
+    with log_latency("ensure_session"):
+        await _ensure_session(session_id)
+
+    with log_latency("make_runner"):
+        runner = _make_runner(session_id)
+
     content = types.Content(
         role="user",
         parts=[types.Part(text=message)],
     )
 
     async def event_generator():
-        # Send session_id as first event so the client can store it
         yield f"data: {json.dumps({'type': 'session', 'session_id': session_id})}\n\n"
+
+        # Track time-to-first-chunk separately from total stream time — the
+        # first matters for perceived latency, the second for end-to-end cost.
+        t0 = time.perf_counter()
+        first_chunk_logged = False
 
         async for event in runner.run_async(
             user_id=session_id,
@@ -172,8 +199,14 @@ async def stream(
             if event.content and event.content.parts:
                 chunk = event.content.parts[0].text or ""
                 if chunk:
+                    if not first_chunk_logged:
+                        elapsed_ms = (time.perf_counter() - t0) * 1000
+                        print(f"[LATENCY] stream:time_to_first_chunk: {elapsed_ms:.1f}ms", flush=True)
+                        first_chunk_logged = True
                     yield f"data: {json.dumps({'type': 'chunk', 'text': chunk})}\n\n"
 
+        total_ms = (time.perf_counter() - t0) * 1000
+        print(f"[LATENCY] stream:total: {total_ms:.1f}ms", flush=True)
         yield "data: [DONE]\n\n"
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
