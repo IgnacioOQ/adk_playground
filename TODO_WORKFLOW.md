@@ -25,51 +25,6 @@ This file is the per-repository instance of the `TODO_WORKFLOW_TEMPLATE.md` patt
 
 ---
 
-## Verify chatbot_template latency instrumentation in production
-- status: todo
-- type: task
-- id: todo.verify_chatbot_latency_logs
-- description: Probe the production /chat endpoint and confirm structured-JSON [LATENCY] lines reach Cloud Logging at NOTICE severity, then assess whether `thinking_budget=0` + `maximum_remote_calls=3` actually moved per-trip latency.
-- owner: agent
-- blocked_by: []
-- last_checked: 2026-05-11
-<!-- content -->
-**Context:** Backend revision `chatbot-template-app-backend-00003-9db` (image `cb1a9e5`) was deployed at the end of the 2026-05-11 session with: (a) `log_latency` context manager emitting structured JSON at `severity=NOTICE`, (b) `GenerateContentConfig` on the LlmAgent setting `thinking_budget=0` and `maximum_remote_calls=3`. The project's `_Default` log sink exclusion was updated from `severity < WARNING` to `severity < NOTICE` so NOTICE+ entries are ingested. The probe + log verification was not completed in-session because the user had to wrap up. See WORKLOG.md entry for 2026-05-11.
-
-**Preconditions:**
-- Authenticated gcloud session: `gcloud auth print-access-token` succeeds.
-- Backend revision serving 100% traffic is `00003-9db` or later (confirm with `gcloud run services describe chatbot-template-app-backend --project=chatbot-template-eikasia --region=us-central1 --format='value(status.latestReadyRevisionName)'`).
-
-**Steps:**
-1. Mint an ID token and probe `/chat` 3–5 times with distinct messages (mix of off-topic, RPS round-start, RPS pick). Capture client-side `time_total` for each.
-   ```bash
-   BACKEND="https://chatbot-template-app-backend-207274917577.us-central1.run.app"
-   TOKEN="$(gcloud auth print-identity-token)"
-   SID="latency-verify-$(date +%s)"
-   for msg in "hello" "let's play" "rock" "scissors" "stats"; do
-     curl -sS -X POST "$BACKEND/chat" \
-       -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-       -d "{\"message\":\"$msg\",\"session_id\":\"$SID\"}" \
-       -w "\n  client_total=%{time_total}s\n"
-     sleep 2
-   done
-   ```
-2. Wait ~15s for log ingestion, then pull `[LATENCY]` entries from Cloud Logging. Severity is `NOTICE`, payload arrives as `jsonPayload.message` (not `textPayload`):
-   ```bash
-   gcloud logging read \
-     'resource.type="cloud_run_revision" AND resource.labels.service_name="chatbot-template-app-backend" AND jsonPayload.message=~"\\[LATENCY\\]"' \
-     --project=chatbot-template-eikasia --limit=80 \
-     --format='value(timestamp,jsonPayload.message)' --freshness=15m
-   ```
-3. Analyze. For each request you expect three or four lines per turn: `ensure_session`, `make_runner`, `chat:runner_run` (and `stream:time_to_first_chunk` + `stream:total` for `/stream`). The dominant cost should be `chat:runner_run` (per the round-trip-dominance mental model in `content/how-to/LLM_LATENCY_SKILL.md`). If `make_runner` is non-trivial (>200ms), that's the MCP-subprocess-respawn-per-request hypothesis from the session analysis — investigate ADK's McpToolset lifecycle.
-4. Compare against a baseline. The pre-change client wall times observed in the 2026-05-11 session were 2.4s / 3.9s / 2.9s for `/chat`. If post-change times are materially lower, the knobs worked. If not, the next lever is likely tool-call dedupe in the MCP server or prompt shrink — both deferred pending data.
-
-**Verification:** Step 2 returns at least one `[LATENCY] chat:runner_run: <Nms>` line. Step 4 produces a defensible answer: knobs worked, or further work needed.
-
-**On completion:** Delete this entire task block from TODO_WORKFLOW.md (from the `---` above the `##` header to the `---` below the last line). If further latency work is warranted (e.g., MCP lifecycle investigation, dedupe, prompt shrink), add a follow-up task block.
-
----
-
 ## Task Template
 
 Copy the block below (without the outer fences), fill in all fields, and insert it as a new `## [Task Title]` task block.

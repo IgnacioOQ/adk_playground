@@ -18,3 +18,20 @@ Backward-looking record of non-trivial sessions on this repo. Entries are append
   - **Kept `main` and `chatbot-template` strictly in sync** for every commit. Both branches point to the same SHA at all times. This is the user's preference per session context.
 - **KB changes:** none. `content/how-to/LLM_LATENCY_SKILL.md` was consumed (read in full) but not modified. The cost-policy exclusion's description references `INFRASTRUCTURE_DEFINITIONS_REF.md`; that KB doc was *not* updated to reflect the new `< NOTICE` filter — flag for a future session.
 - **Follow-up:** see `TODO_WORKFLOW.md` task `todo.verify_chatbot_latency_logs`. Outstanding: probe production `/chat`, verify `[LATENCY]` lines ingest at NOTICE, and assess whether the latency knobs moved per-trip cost vs. the pre-change baseline (2.4s / 3.9s / 2.9s client wall-time for three exploratory probes).
+
+---
+
+## 2026-05-11 (later) — chatbot_template: verified latency instrumentation, knobs worked
+
+- **Task:** Execute `todo.verify_chatbot_latency_logs` from `TODO_WORKFLOW.md`: probe production `/chat` against the deployed `00003-9db` revision, confirm `[LATENCY]` lines ingest at NOTICE, and decide whether the `thinking_budget=0` + `maximum_remote_calls=3` knobs moved per-trip latency vs. the pre-change baseline.
+- **Outcome:**
+  - **Logs ingest cleanly.** 15 `[LATENCY]` entries from 5 probes, all severity=NOTICE, all in the `run.googleapis.com/stdout` log stream.
+  - **Knobs worked.** Warm client wall-time mean ~2.25s (1.9 / 2.7 / 2.3 / 2.1) vs. pre-change baseline ~3.0s (2.4 / 3.9 / 2.9) — ~25% improvement. `chat:runner_run` ranges 1.5–2.4s warm, well under the playbook's "5–8s per round-trip on Flash-class" floor.
+  - **MCP-respawn-per-request hypothesis ruled out.** `make_runner` is consistently ~0.1ms across all 5 probes. The stdio subprocess persists at module load via the `root_agent` binding.
+  - **Cold start is ~13s of invisible time.** First probe was 15.6s client wall-time but `chat:runner_run` was only 2.4s; the gap is container boot + ADK init + first MCP spawn, which happen before the FastAPI handler can instrument anything. Only addressable by `minInstances ≥ 1` — not worth the cost at current traffic (~2 users/week).
+  - **Multi-tool turns don't multiply round-trips.** Turn 3 ("rock" → `record_round` + `get_stats` + A2UI synthesis) took 2.25s — only ~500ms over a single-tool turn. Gemini AFC is collapsing the two tool calls into one inference cycle, so `maximum_remote_calls=3` had headroom and wasn't the binding constraint.
+- **Key decisions:**
+  - **No further latency work warranted now.** The remaining playbook levers (system-prompt shrink, server-side dedupe in `rps_memory_server.py`) have diminishing returns at this scale. Don't pre-optimize.
+  - **Updated the TODO recipe in passing:** the original task had `jsonPayload.message` as the filter path — Cloud Run's log forwarder actually unwraps `{"severity":..., "message":...}` into `severity=NOTICE` + `textPayload=...`, so the correct filter is `textPayload:"[LATENCY]"`. Worth knowing for next time.
+- **KB changes:** none. `content/how-to/LLM_LATENCY_SKILL.md` accurately predicted both the dominant cost (LLM round-trip) and the magnitude. No correction or addition warranted.
+- **Follow-up:** none. Task block deleted from `TODO_WORKFLOW.md`.
