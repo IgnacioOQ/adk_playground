@@ -1,14 +1,15 @@
+---
+status: active
+type: plan
+id: adk_playground.todo_workflow
+description: 'Cross-session task backlog; each task is self-contained and can be picked up by a coding agent with kb_mcp MCP tool access.'
+label: [planning, agent]
+injection: excluded
+volatility: evolving
+owner: agent
+last_checked: '2026-05-17'
+---
 # TODO Workflow
-- status: active
-- type: plan
-- id: adk_playground.todo_workflow
-- description: Cross-session task backlog; each task is self-contained and can be picked up by a coding agent with kb_mcp MCP tool access.
-- label: [planning, agent]
-- injection: excluded
-- volatility: evolving
-- owner: agent
-- last_checked: 2026-05-11
-<!-- content -->
 Cross-session task backlog. Tasks are added here when work started in a session cannot be completed immediately. Each task must be fully self-contained — a fresh agent should be able to pick it up using only the task body and the kb_mcp tools, with no additional context required.
 
 This file is the per-repository instance of the `TODO_WORKFLOW_TEMPLATE.md` pattern. It lives at the root of the working repository alongside `WORKLOG.md` and is intentionally **not registered with kb_mcp** — agents access it via the regular filesystem `Read`/`Edit` tools, not via `knowledge_base_*` calls.

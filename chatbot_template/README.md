@@ -1,3 +1,12 @@
+---
+status: active
+type: reference
+description: Chatbot Template subproject README — local dev with dev.sh, production deploy flow off the chatbot-template branch, and architecture (Next.js SSR on Firebase App Hosting + FastAPI on Cloud Run).
+label: [backend, frontend, infrastructure]
+injection: informational
+volatility: evolving
+last_checked: '2026-05-17'
+---
 # Chatbot Template
 
 A minimal production-ready ADK chatbot:
@@ -5,11 +14,11 @@ A minimal production-ready ADK chatbot:
 - **Backend**: Python 3.11 + FastAPI + Google ADK (`gemini-2.5-flash`). Endpoints: `POST /chat`, `GET /stream` (SSE), `GET /health`.
 - **Frontend**: Next.js 14 (App Router, TypeScript, SSR). Server-side proxy routes call the backend with OIDC ID tokens minted via the GCP metadata server.
 
-See `ADK_CHATBOT_SKILL.md` for the development pattern and `A2UI_REF.md` for the agent-to-UI protocol.
+See `content/how-to/ADK_CHATBOT_SKILL.md` in the knowledge_base for the development pattern and `content/reference/A2UI_REF.md` for the agent-to-UI protocol.
 
 ## Architecture (production)
 
-```
+```text
 [Browser]
    |  HTTPS
    v
@@ -48,13 +57,13 @@ This starts:
 The Next.js proxy routes detect `BACKEND_URL=http://localhost:*` and skip OIDC ID token minting (which only works inside GCP).
 
 Backend env (`backend/.env`):
-```
+```bash
 GOOGLE_API_KEY=AIza...
 ALLOWED_ORIGINS=http://localhost:3000
 ```
 
 Frontend env (`frontend/.env.local`):
-```
+```bash
 BACKEND_URL=http://localhost:8080
 ```
 

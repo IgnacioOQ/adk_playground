@@ -1,12 +1,14 @@
+---
+status: active
+type: how-to
+id: workflow_agents.workflow_skill
+description: Architecture and implementation guide for the report_pipeline_agent in this repo — a worked composition of SequentialAgent, ParallelAgent, and LoopAgent producing a polished research report.
+label: [backend, skill]
+injection: procedural
+volatility: evolving
+last_checked: '2026-05-17'
+---
 # Workflow Agents Skill — Architecture & Implementation Guide
-- status: active
-- type: how-to
-- id: workflow_agents.workflow_skill
-- label: [backend, skill]
-- injection: procedural
-- volatility: evolving
-- last_checked: 2026-03-17
-<!-- content -->
 This document describes the architecture, implementation, and usage of the `report_pipeline_agent` — an ADK agent that uses all **three workflow agent types** (SequentialAgent, ParallelAgent, LoopAgent) to generate a polished research report on any user-supplied topic.
 
 It is the canonical worked example for workflow agent composition in this repository.
@@ -36,7 +38,7 @@ WorkflowAgent(
 ## Architecture Overview
 The pipeline is orchestrated by a top-level `SequentialAgent` that chains three phases in strict order:
 
-```
+```text
 ┌──────────────────────────────────────────────────────────────────────────┐
 │                        report_pipeline_agent                             │
 │                           (SequentialAgent)                              │
@@ -85,7 +87,7 @@ The pipeline is orchestrated by a top-level `SequentialAgent` that chains three 
 | Phase 3 each iteration | `review_notes` (updated), `draft` (updated) |
 
 ## File Structure
-```
+```text
 workflow_agents/
 ├── __init__.py                # Python package marker
 ├── .env                       # Git-ignored — contains GOOGLE_API_KEY
@@ -149,7 +151,7 @@ research_phase_agent = ParallelAgent(
 - Combine with a downstream `SequentialAgent` step (fan-in) to merge the parallel outputs.
 
 **Fan-out / fan-in pattern:**
-```
+```text
 SequentialAgent
   └─ ParallelAgent (fan-out: A, B, C run concurrently → state["a"], ["b"], ["c"])
   └─ LlmAgent     (fan-in: instruction reads {a}, {b}, {c} and synthesises them)
@@ -228,7 +230,7 @@ from google.adk.tools import ToolContext  # needed for exit_loop tool
 
 Any downstream agent in the same `InvocationContext` can read this value via a `{key}` placeholder in its `instruction` string. ADK resolves placeholders at runtime, just before calling the LLM.
 
-```
+```text
 LlmAgent(output_key="draft")   →  session.state["draft"] = "<agent's last response>"
 
 LlmAgent(instruction="Revise: {draft}")

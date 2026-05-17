@@ -1,11 +1,12 @@
+---
+status: active
+type: reference
+label: [core, template]
+injection: informational
+volatility: evolving
+last_checked: '2026-05-17'
+---
 # ADK Playground
-- status: active
-- type: reference
-- label: [core, template]
-- injection: informational
-- volatility: evolving
-- last_checked: 2026-05-11
-<!-- content -->
 
 ## What is Google ADK?
 The Agent Development Kit (ADK) is a flexible and modular framework developed by Google for building and deploying AI agents. While optimized for Gemini and the Google ecosystem, ADK is model-agnostic, deployment-agnostic, and designed to make agentic architectures feel more like traditional software development.
@@ -63,7 +64,7 @@ To install the Agent Development Kit in Python, simply run:
 pip install google-adk
 ```
 
-*(Note: ADK is also available for TypeScript, Go, and Java.)*
+(Note: ADK is also available for TypeScript, Go, and Java.)
 
 ## Local Project Conventions
 This playground enforces several project-specific conventions to maximize AI-agent efficiency:
@@ -95,7 +96,7 @@ This repository is organized to separate conversational contexts and agent code:
   - Run: `cd ecosystem && npm install && npm run dev` → opens at `http://localhost:5173`.
   - Drag nodes (LlmAgent, SequentialAgent, ParallelAgent, LoopAgent, Tool, McpToolset) onto the canvas, connect them with edges, edit properties in the right panel, and click **Export Python** to download a working `agent.py`.
   - `ecosystem/src/utils/codeGenerator.ts`: Topological-sort-based Python ADK code generator.
-  - `ecosystem/ADK_DESIGNER_SKILL.md`: Usage guide, node reference, and extension roadmap.
+  - For the usage guide, node reference, and extension roadmap, see `content/how-to/ADK_DESIGNER_SKILL.md` in the knowledge_base.
 - `chatbot_template/`: A **production-ready ADK chatbot template** with a decoupled frontend/backend architecture. The backend is a Python FastAPI service wrapping an ADK agent; the frontend is a Next.js (TypeScript) app. Agents can return plain text or structured A2UI JSON payloads that the frontend renders as rich interactive widgets.
   - Run both services together: `./chatbot_template/dev.sh` → backend at `http://localhost:8080`, frontend at `http://localhost:3000`.
   - **Production deployment.** The frontend runs on **Firebase App Hosting** (Next.js SSR on a managed Cloud Run service, fronted by Cloud CDN); the backend runs as a separate IAM-only **Cloud Run** service. The browser never calls the backend directly — Next.js server-side proxy routes mint an OIDC ID token via the GCP metadata server and call the backend on the user's behalf. `GOOGLE_API_KEY` is mounted from Secret Manager into the backend.
@@ -105,5 +106,5 @@ This repository is organized to separate conversational contexts and agent code:
     - Wiring lives in `chatbot_template/firebase.json` (App Hosting backend declaration) and `chatbot_template/frontend/apphosting.yaml` (runtime config + `BACKEND_URL`). Detailed runbook in `chatbot_template/README.md`.
   - `chatbot_template/backend/`: FastAPI server with `InMemorySessionService`, `/chat` (single-turn), `/stream` (SSE), and `/health` endpoints. Copy, rename, and drop in your `agent.py` to get started.
   - `chatbot_template/frontend/`: Next.js app with `useChat` hook, `A2UIRenderer` component registry, and `ChatWindow` UI.
-  - `chatbot_template/ADK_CHATBOT_SKILL.md`: Step-by-step guide covering scaffolding, agent wiring, A2UI integration, and Cloud Run / Vertex AI / Firebase / Vercel deployment.
-  - `chatbot_template/A2UI_REF.md`: Full Agent-to-UI protocol reference — component schemas, renderer pattern, and extension guide.
+  - For the step-by-step development guide (scaffolding, agent wiring, A2UI integration, Cloud Run / Vertex AI / Firebase / Vercel deployment), see `content/how-to/ADK_CHATBOT_SKILL.md` in the knowledge_base.
+  - For the full Agent-to-UI protocol reference (component schemas, renderer pattern, extension guide), see `content/reference/A2UI_REF.md` in the knowledge_base.

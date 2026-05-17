@@ -1,3 +1,12 @@
+---
+status: active
+type: log
+description: Backward-looking record of non-trivial sessions on the adk_playground repo; entries are appended at the bottom and forward-looking work lives in TODO_WORKFLOW.md.
+label: [agent]
+injection: informational
+volatility: evolving
+last_checked: '2026-05-17'
+---
 # Worklog
 
 Backward-looking record of non-trivial sessions on this repo. Entries are appended at the bottom of the file. Forward-looking pending work lives in `TODO_WORKFLOW.md`.
@@ -35,3 +44,22 @@ Backward-looking record of non-trivial sessions on this repo. Entries are append
   - **Updated the TODO recipe in passing:** the original task had `jsonPayload.message` as the filter path — Cloud Run's log forwarder actually unwraps `{"severity":..., "message":...}` into `severity=NOTICE` + `textPayload=...`, so the correct filter is `textPayload:"[LATENCY]"`. Worth knowing for next time.
 - **KB changes:** `content/how-to/LLM_LATENCY_SKILL.md` updated (Phase 5 capture during session wrap-up): added a "Cloud Run gotcha — structured severity" subsection under Step 1, covering the discovery that a plain `print(...)` / `logger.info(...)` lands at `severity=INFO` and is silently dropped by `severity < WARNING` cost-policy sinks, plus the structured-JSON workaround and the `textPayload:"[LATENCY]"` filter (NOT `jsonPayload.message`, because the Cloud Run forwarder unwraps `message` into `textPayload`). The doc's existing content was otherwise accurate; only an addition was warranted, no correction. Phase 7 perf events recorded: one `success` for LLM_LATENCY_SKILL.md, one `session_summary`.
 - **Follow-up:** none. Task block deleted from `TODO_WORKFLOW.md`.
+
+---
+
+## 2026-05-17 — MDDIA migration: dedupe local docs against KB, format-flip the rest
+
+- **Task:** MD_CONVENTIONS.md was updated upstream to YAML-frontmatter form (legacy `# Title` + bulleted metadata + `<!-- content -->` is deprecated). Audit and remediate all `.md` files in adk_playground for MDDIA compliance, and remove documents that are duplicated in the knowledge_base.
+- **Outcome:**
+  - **Audit baseline.** Initial run of `knowledge_base_audit_mddia_compliance` on 18 project files surfaced 115 errors: 16 `legacy-bullet-form`, 76 `md030`, 20 `md040`, 2 `missing-frontmatter`, 1 `md036`.
+  - **Dedupe pass.** Cross-referenced each file against the KB catalog and deleted 12 files that are present in the KB (same section structure, ≤48 line body delta, KB version carries the canonical preamble + description + scope): `chatbot_template/A2UI_REF.md`, `chatbot_template/ADK_CHATBOT_SKILL.md`, `docs/ADK_MCP_SKILL.md`, `docs/ADK_SKILL.md`, `docs/ADK_TOOLS_SKILL.md`, `docs/ADK_WORKFLOW_SKILL.md`, `docs/MCP_SKILL.md`, `docs/MCP_SKLEARN_PLAN.md`, `ecosystem/ADK_ABSTRACTOR_SKILL.md`, `ecosystem/ADK_DESIGNER_SKILL.md`, `mcp_tools/FILESYSTEM_SKILL.md`, `tutorial_agent/TUTORIAL.md`. Inbound references in `README.md` and `chatbot_template/README.md` rewritten to point at the KB paths.
+  - **Format-flip pass.** Migrated the 6 surviving project-specific files to YAML frontmatter and tagged bare fences with `text` / `bash`: `README.md`, `TODO_WORKFLOW.md`, `WORKLOG.md`, `chatbot_template/README.md`, `content/logs/AGENTS_LOG.md`, `workflow_agents/WORKFLOW_SKILL.md`. `WORKLOG.md` and `chatbot_template/README.md` had no MDDIA metadata at all, so frontmatter was prepended fresh with a written `description`.
+  - **Re-audit clean.** 6/6 files OK, 0 errors, 0 warnings.
+- **Key decisions:**
+  - **Deletion over snapshot export.** For every duplicate, chose option A (delete and redirect inbound references to the KB) over option B (`knowledge_base_repo_export` to vendor a managed snapshot). The KB is reachable from this repo's tooling, and snapshots add drift surface area; consumer-repo readability without `kb_mcp` wasn't a hard requirement.
+  - **`workflow_agents/WORKFLOW_SKILL.md` kept.** Verified against both KB candidates: `content/how-to/WORKFLOW_SKILL.md` (KB) is about *how to write workflow documents* (341-line diff, different topic), and `content/reference/ADK_WORKFLOW_REF.md` is the ADK workflow-agents reference (638-line diff). The local file documents a specific `report_pipeline_agent` implementation in this repo and has no KB analogue.
+  - **Ignored non-MDDIA markdownlint warnings (MD022/MD031/MD032/MD034).** MDDIA's enforced rule set per MD_CONVENTIONS.md § Markdown Hygiene Conventions is MD025/MD024/MD040/MD046/MD030/MD036. The IDE surfaces the broader markdownlint config but those rules are out of MDDIA scope and the audit tool does not flag them.
+- **KB changes:** none — adk_playground files are external to the KB and were edited via the filesystem, not via `knowledge_base_update`/`import`.
+- **Follow-up:**
+  - `docs/` directory is now empty; up to the user whether to `rmdir` it or keep it as a placeholder for future project-specific docs.
+  - No deletions or modifications staged or committed; user reviews the diff and commits manually per the no-auto-commit preference.
