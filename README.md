@@ -1,12 +1,15 @@
 ---
 status: active
 type: reference
+description: Top-level guide to the ADK Playground repo — Google Agent Development Kit concepts, the agent projects it contains, local Markdown-JSON conventions, and the session worklog format.
 label: [core, template]
 injection: informational
 volatility: evolving
-last_checked: '2026-05-17'
+last_checked: '2026-05-20'
 ---
 # ADK Playground
+
+This repository is a playground and central nervous system for learning and experimenting with Google's Agent Development Kit (ADK). It collects several self-contained agent projects — a getting-started tutorial agent, an MCP tool-integration example, a workflow-agents pipeline, a visual drag-and-drop designer, and a production chatbot template — alongside the local conventions that keep them consistent. Start here for a map of what the repo contains and how it is organized; reach for the per-project guides in the knowledge base for implementation detail.
 
 ## What is Google ADK?
 The Agent Development Kit (ADK) is a flexible and modular framework developed by Google for building and deploying AI agents. While optimized for Gemini and the Google ecosystem, ADK is model-agnostic, deployment-agnostic, and designed to make agentic architectures feel more like traditional software development.
@@ -72,6 +75,22 @@ This playground enforces several project-specific conventions to maximize AI-age
 - **Markdown-JSON Hybrid Schema**: All core Markdown files must follow a strict header-metadata format (described in `MD_CONVENTIONS.md`) ensuring loss-less conversion to JSON.
 - **Agent Logs**: Every agent that performs a significant intervention must update `content/logs/AGENTS_LOG.md` (as per `AGENTS.md` guidelines).
 - **Core Principles**: See `AGENTS.md` for human-assistant workflows, constraints, and instructions on context fine-tuning.
+
+## Session Worklog (`worklog.jsonl`)
+Non-trivial agent sessions are recorded in `worklog.jsonl` at the repository root — a plain JSONL file with one JSON object per line, oldest first. It replaces the former `WORKLOG.md`: the worklog now lives outside the Markdown-JSON schema and the knowledge-base discovery surface (kb_mcp, search indexers, the MDDIA audit), so it is never injected as agent context and never linted as a Markdown document.
+
+Each line is one entry conforming to `schema_version: 1`:
+
+| Field | Type | Notes |
+| :--- | :--- | :--- |
+| `schema_version` | int | Schema version of the entry. Currently `1`. |
+| `entry_id` | string | Unique across the file. `YYYY-MM-DD-s{N}` when `session_id` is set; plain `YYYY-MM-DD` otherwise. |
+| `date` | string | ISO `YYYY-MM-DD` the session took place. |
+| `session_id` | int \| null | Sequential session counter — the previous entry's `session_id` + 1. `null` if sessions are not tracked. |
+| `summary` | string | One-line description of what the session accomplished. |
+| `body_markdown` | string | Full narrative (Task / Outcome / Key decisions / KB changes / Follow-up) as a single Markdown blob; newlines JSON-escaped as `\n`. |
+
+The full append protocol — deriving the next `session_id`, constructing the entry, and reading entries back — lives in `TODO_WORKFLOW.md` § Worklog (`worklog.jsonl`) — Schema & Append Protocol.
 
 ## Project Structure
 This repository is organized to separate conversational contexts and agent code:

@@ -1,5 +1,12 @@
 {
   "permissions": {
+    "allow": [
+      "Bash(python3 /tmp/adk_worklog_migrate.py)",
+      "Bash(python3 -m json.tool)",
+      "Bash(rm WORKLOG.md)",
+      "Bash(rm /tmp/adk_worklog_migrate.py)",
+      "Bash(python3 /tmp/adk_worklog_append.py)"
+    ],
     "additionalDirectories": [
       "/tmp",
       "/private/tmp"
